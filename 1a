@@ -1,0 +1,1088 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>html{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Simulador Eleitoral RJ 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+:root{
+  --bg:#ECEFE9; --surface:#FFFFFF; --surface-2:#F5F7F2; --ink:#17201B; --muted:#5B665F; --faint:#8A948D;
+  --line:#D3D9D0; --line-2:#E4E8E1;
+  --accent:#15703F; --accent-ink:#FFFFFF; --accent-soft:#DDEFE3;
+  --warn:#B85613; --warn-soft:#FBE9DA; --bad:#B42318;
+  --lcd:#1E2A22; --lcd-ink:#B8F0C8;
+  --shadow:0 1px 2px rgba(20,30,24,.06),0 4px 16px rgba(20,30,24,.05);
+  --r:10px;
+  --ui:"Archivo",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0E1210; --surface:#161B18; --surface-2:#1B211E; --ink:#E3E9E4; --muted:#9AA59E; --faint:#6F7A73;
+    --line:#2B332F; --line-2:#222925;
+    --accent:#43C07F; --accent-ink:#08140D; --accent-soft:#17301F;
+    --warn:#F0A060; --warn-soft:#3A2616; --bad:#F2786B;
+    --lcd:#0A100C; --lcd-ink:#8EE3A8;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.25);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0E1210; --surface:#161B18; --surface-2:#1B211E; --ink:#E3E9E4; --muted:#9AA59E; --faint:#6F7A73;
+  --line:#2B332F; --line-2:#222925;
+  --accent:#43C07F; --accent-ink:#08140D; --accent-soft:#17301F;
+  --warn:#F0A060; --warn-soft:#3A2616; --bad:#F2786B;
+  --lcd:#0A100C; --lcd-ink:#8EE3A8;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.25);
+}
+*{box-sizing:border-box}
+html,body{background:var(--bg)}
+body{font-family:var(--ui);font-size:14px;line-height:1.45;color:var(--ink);font-variant-numeric:tabular-nums;padding-inline:16px;padding-block:0 48px}
+button,input,select{font:inherit;color:inherit}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1560px;margin:0 auto}
+
+/* ---------- top bar ---------- */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);margin-inline:-16px;padding:12px 16px 10px;border-bottom:1px solid var(--line)}
+.top-row{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;max-width:1560px;margin:0 auto}
+.brand{display:flex;align-items:center;gap:10px;margin-right:auto}
+.lcd{font-family:var(--mono);font-weight:600;font-size:12px;letter-spacing:.08em;background:var(--lcd);color:var(--lcd-ink);padding:5px 8px;border-radius:4px}
+.brand h1{font-size:19px;font-weight:750;font-stretch:78%;letter-spacing:.005em;margin:0;text-wrap:balance}
+.scen{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.scen-name{display:flex;align-items:center;gap:6px;font-weight:600;max-width:260px;min-width:0}
+.scen-name span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dirty{width:8px;height:8px;border-radius:50%;background:var(--warn);flex:none}
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 11px;cursor:pointer;font-weight:550;white-space:nowrap}
+.btn:hover{border-color:var(--faint)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--muted)}
+.btn.ghost:hover{color:var(--ink);border-color:var(--line)}
+.btn.danger{color:var(--bad)}
+.btn.small{padding:3px 8px;font-size:12.5px;border-radius:6px}
+.btn[disabled]{opacity:.45;cursor:default}
+
+/* scenario panel */
+.popover{position:absolute;right:16px;top:calc(100% + 6px);width:min(420px,calc(100vw - 32px));background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:14px;z-index:30;display:grid;gap:12px}
+.popover h3{margin:0;font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:650}
+.scen-list{display:grid;gap:2px;max-height:320px;overflow:auto}
+.scen-item{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:7px 8px;border-radius:7px}
+.scen-item:hover{background:var(--surface-2)}
+.scen-item.cur{background:var(--accent-soft)}
+.scen-item .nm{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.scen-item .dt{font-size:12px;color:var(--muted)}
+.scen-item .acts{display:flex;gap:2px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.field{border:1px solid var(--line);background:var(--surface);border-radius:7px;padding:6px 9px;min-width:0}
+.field:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px var(--accent-soft)}
+.note{font-size:12.5px;color:var(--muted)}
+.note.warn{color:var(--warn)}
+
+/* ---------- turnout strip ---------- */
+.strip{display:flex;flex-wrap:wrap;gap:10px 22px;align-items:flex-end;padding:14px 0 6px}
+.kv{display:grid;gap:3px}
+.kv label{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:650}
+.kv .field{width:132px;text-align:right}
+.kv.narrow .field{width:84px}
+.strip .calc{display:grid;gap:3px}
+.strip .calc b{font-size:15px}
+.strip .calc span{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:650}
+.strip .sep{width:1px;align-self:stretch;background:var(--line);margin-inline:2px}
+
+/* ---------- tabs ---------- */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-top:10px;overflow-x:auto;scrollbar-width:none}
+.tab{appearance:none;border:0;background:none;padding:10px 14px 9px;font-weight:650;font-stretch:88%;font-size:15px;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap;display:flex;gap:8px;align-items:center}
+.tab:hover{color:var(--ink)}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.tab .cnt{font-family:var(--mono);font-size:11.5px;font-weight:500;color:var(--faint)}
+.racehead{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline;padding:16px 0 12px}
+.racehead h2{margin:0;font-size:26px;font-weight:780;font-stretch:72%;letter-spacing:.005em}
+.racehead .sub{color:var(--muted)}
+.racehead .links{margin-left:auto;display:flex;gap:14px;font-size:13px}
+.racehead .links a{text-decoration:none;font-weight:600}
+.racehead .links a:hover{text-decoration:underline}
+
+/* ---------- race layout ---------- */
+.race{display:grid;grid-template-columns:minmax(330px,420px) 1fr;gap:20px;align-items:start}
+@media (max-width:980px){.race{grid-template-columns:1fr}}
+.inputs{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);display:flex;flex-direction:column;min-width:0}
+@media (min-width:981px){.inputs{position:sticky;top:calc(env(safe-area-inset-top,0px) + 70px);max-height:calc(100vh - 90px)}}
+.inputs-head{padding:12px;border-bottom:1px solid var(--line);display:grid;gap:10px}
+.inputs-body{overflow:auto;min-height:0}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.seg button{border:0;background:var(--surface);padding:4px 10px;font-weight:600;font-size:12.5px;cursor:pointer;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
+.assign{display:grid;gap:4px}
+.bar{height:6px;border-radius:3px;background:var(--line-2);overflow:hidden;display:flex}
+.bar i{display:block;height:100%}
+
+.folder{border-bottom:1px solid var(--line-2)}
+.fhead{display:grid;grid-template-columns:14px 10px 1fr auto auto;gap:10px;align-items:center;width:100%;padding:10px 12px;background:none;border:0;cursor:pointer;text-align:left}
+.fhead:hover{background:var(--surface-2)}
+.chev{width:14px;height:14px;color:var(--faint);transition:transform .15s}
+.folder.open .chev{transform:rotate(90deg)}
+.sw{width:10px;height:10px;border-radius:3px}
+.fname{min-width:0}
+.fname b{display:block;font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fname small{display:block;color:var(--muted);font-size:12px}
+.ftot{font-weight:600;text-align:right;font-size:13px}
+.ftot small{display:block;color:var(--muted);font-weight:400;font-size:11.5px}
+.seatb{min-width:30px;text-align:center;font-family:var(--mono);font-weight:600;font-size:12.5px;border-radius:6px;padding:2px 6px;background:var(--surface-2);color:var(--muted)}
+.seatb.on{background:var(--accent);color:var(--accent-ink)}
+.fbody{padding:4px 12px 14px 12px;display:grid;gap:10px}
+.lines{display:grid;gap:6px;background:var(--surface-2);border-radius:8px;padding:10px}
+.line{display:grid;grid-template-columns:1fr 128px;gap:10px;align-items:center}
+.line label{font-weight:600;font-size:13px}
+.line label small{display:block;font-weight:400;color:var(--muted);font-size:11.5px}
+.num{width:100%;text-align:right;border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:5px 8px}
+.num:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px var(--accent-soft)}
+.num[readonly]{background:transparent;border-style:dashed;color:var(--muted)}
+.num::placeholder{color:var(--faint);font-style:italic}
+.warnline{color:var(--warn);font-size:12.5px;font-weight:600}
+.cands{display:grid}
+.cand{display:grid;grid-template-columns:44px 1fr 112px 22px;gap:8px;align-items:center;padding:4px 0;border-top:1px solid var(--line-2)}
+.cand:first-child{border-top:0}
+.cand .n{font-family:var(--mono);font-size:12.5px;color:var(--muted)}
+.cand .nm{min-width:0}
+.cand .nm b{font-weight:560;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cand .nm small{color:var(--muted);font-size:11.5px}
+.st{width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font-size:10px;font-weight:700;font-family:var(--mono)}
+.st.e{background:var(--accent);color:var(--accent-ink)}
+.st.s{border:1.5px solid var(--faint);color:var(--faint)}
+.search{position:relative}
+.search .field{width:100%;padding-left:30px}
+.search svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);width:15px;height:15px;color:var(--faint)}
+.hitlist{padding:6px 12px 12px}
+.hitlist .cand{grid-template-columns:44px 1fr 112px 22px}
+.empty{padding:22px 14px;color:var(--muted);text-align:center}
+
+/* ---------- results ---------- */
+.results{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:16px;min-width:0}
+@media (max-width:420px){.results{grid-template-columns:1fr}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;min-width:0;display:flex;flex-direction:column;gap:12px}
+.panel.wide{grid-column:1/-1}
+.panel h3{margin:0;font-size:16px;font-weight:720;font-stretch:82%;letter-spacing:.01em;display:flex;align-items:baseline;gap:8px}
+.panel h3 small{font-weight:500;color:var(--muted);font-size:12.5px;font-stretch:100%}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{background:var(--surface-2);border:1px solid var(--line-2);border-radius:7px;padding:5px 8px;display:grid;gap:1px}
+.chip span{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:650}
+.chip b{font-size:14px}
+.tbl-wrap{overflow-x:auto;margin-inline:-4px}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:650;text-align:right;padding:6px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:5px 6px;border-bottom:1px solid var(--line-2);text-align:right;white-space:nowrap}
+th.l,td.l{text-align:left}
+td.nmc{max-width:170px;overflow:hidden;text-overflow:ellipsis}
+tr.div td{border-bottom:2px solid var(--ink);padding:0}
+tr.flag td{background:var(--warn-soft)}
+.auto{font-style:italic;color:var(--muted)}
+.tag{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.04em;border-radius:4px;padding:1px 5px;text-transform:uppercase}
+.tag.qp{background:var(--accent-soft);color:var(--accent)}
+.tag.s2{background:var(--surface-2);color:var(--ink);border:1px solid var(--line)}
+.tag.s3{background:var(--warn-soft);color:var(--warn)}
+.tag.a{background:var(--surface-2);color:var(--muted)}
+.dot{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.hemi{width:100%;max-width:520px;margin:0 auto;display:block}
+.seatgrid{display:grid;grid-template-columns:minmax(220px,300px) minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:760px){.seatgrid{grid-template-columns:1fr}}
+.warnlist{display:grid;gap:4px}
+.warnlist summary{cursor:pointer;color:var(--warn);font-size:12.5px;font-weight:600}
+.sub2{display:block;color:var(--muted);font-size:11.5px}
+.more{align-self:center}
+.legend-note{font-size:12px;color:var(--muted);display:flex;gap:12px;flex-wrap:wrap}
+.msg{background:var(--surface-2);border:1px dashed var(--line);border-radius:8px;padding:14px;color:var(--muted)}
+.alert{background:var(--warn-soft);color:var(--warn);border-radius:8px;padding:8px 10px;font-weight:600;font-size:13px}
+
+/* majoritarian */
+.mbars{display:grid;gap:8px}
+.mbar{display:grid;grid-template-columns:minmax(120px,190px) 1fr 108px;gap:10px;align-items:center}
+.mbar .who b{display:block;font-weight:620;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mbar .who small{color:var(--muted);font-size:11.5px}
+.track{height:22px;background:var(--surface-2);border-radius:5px;position:relative;overflow:hidden}
+.track i{position:absolute;left:0;top:0;bottom:0;border-radius:5px}
+.track .thr{position:absolute;top:-2px;bottom:-2px;width:0;border-left:2px dashed var(--ink);opacity:.55}
+.mbar .val{text-align:right}
+.mbar .val b{display:block}
+.mbar .val small{color:var(--muted);font-size:11.5px}
+.mbar.win .who b::after{content:" ✓";color:var(--accent)}
+.verdict{font-size:18px;font-weight:720;font-stretch:84%}
+.verdict.ok{color:var(--accent)}
+.verdict.run{color:var(--warn)}
+.runoff-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.tr{display:grid;grid-template-columns:1fr 70px 70px 64px;gap:8px;align-items:center;font-size:13px;padding:4px 0;border-top:1px solid var(--line-2)}
+.tr.h{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:650;border-top:0}
+.tr .num{padding:4px 6px}
+.selrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+select.field{padding:5px 8px}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--surface);padding:9px 14px;border-radius:8px;font-weight:600;z-index:50;box-shadow:var(--shadow)}
+.foot{margin-top:28px;color:var(--muted);font-size:12.5px;max-width:78ch}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media (max-width:560px){
+  .kv .field{width:112px}
+  .racehead .links{margin-left:0}
+  .mbar{grid-template-columns:1fr 96px}
+  .mbar .track{grid-column:1/-1;grid-row:2}
+}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="top-row">
+    <div class="brand"><span class="lcd">RJ·2026</span><h1>Simulador Eleitoral RJ 2026</h1></div>
+    <div class="scen" id="scen"></div>
+  </div>
+</div>
+<div class="wrap">
+  <div class="strip" id="strip"></div>
+  <div class="tabs" role="tablist" id="tabs"></div>
+  <div id="view"></div>
+  <p class="foot">Regras: quociente eleitoral com arredondamento do Código Eleitoral (art. 106), quociente partidário e mínimo individual de 10% (arts. 107–108), sobras pela maior média com exigência de 80% para a lista e 20% para o candidato (art. 109) e, se ainda restarem vagas, distribuição aberta a todas as listas conforme decisão do STF de 2024. Federações contam como uma única lista. Votos em branco e nulos não entram nos votos válidos.</p>
+</div>
+<div id="toast" class="toast" hidden></div>
+
+<script>const DATA = {"state":"RJ","stateName":"Rio de Janeiro","electorate":12857000,"defaults":{"abst":22.76,"gov":{"blank":5.98,"null":9.11},"sen":{"blank":7.61,"null":25.73},"fed":{"blank":6.23,"null":7.09},"est":{"blank":6.51,"null":7.64}},"races":{"fed":{"seats":46,"lists":[{"id":"avante","name":"Avante","short":"Avante","parties":[{"num":70,"sigla":"Avante"}],"candidates":[{"n":7004,"name":"Alaide Melo","p":"Avante"},{"n":7036,"name":"Alexander Xande 360","p":"Avante"},{"n":7025,"name":"Alexandre Gomes","p":"Avante"},{"n":7088,"name":"Anderson Pessoa","p":"Avante"},{"n":7043,"name":"Andrea Moreno","p":"Avante"},{"n":7044,"name":"Bianca Costa","p":"Avante"},{"n":7023,"name":"Bispo Henrique Santini","p":"Avante"},{"n":7003,"name":"Bombeiro Sarmento","p":"Avante"},{"n":7005,"name":"Cantor Ronaldo Santos","p":"Avante"},{"n":7072,"name":"Claudia Nascimento","p":"Avante"},{"n":7054,"name":"Coronel Guilherme Moraes","p":"Avante"},{"n":7077,"name":"Coronel Henrique","p":"Avante"},{"n":7099,"name":"Dr. Luizinho de Almeida","p":"Avante"},{"n":7012,"name":"Dra. Germana Sorriso","p":"Avante"},{"n":7007,"name":"Dudu Nunes","p":"Avante"},{"n":7031,"name":"Elaine Fernandes","p":"Avante"},{"n":7015,"name":"Enfermeira Luciana Rosa","p":"Avante"},{"n":7063,"name":"Felipe do Boteco","p":"Avante"},{"n":7017,"name":"Joao Valois","p":"Avante"},{"n":7030,"name":"Jonatas da Marcia","p":"Avante"},{"n":7057,"name":"Jr Duble","p":"Avante"},{"n":7083,"name":"Junior Reis","p":"Avante"},{"n":7014,"name":"Juvelino Junior","p":"Avante"},{"n":7075,"name":"Kezia Queiroz","p":"Avante"},{"n":7027,"name":"Ligeiro do Asfalto","p":"Avante"},{"n":7022,"name":"Major Fabiana","p":"Avante"},{"n":7006,"name":"Manu Santos","p":"Avante"},{"n":7033,"name":"Marcos Müller","p":"Avante"},{"n":7090,"name":"Onassis","p":"Avante"},{"n":7020,"name":"Papinha","p":"Avante"},{"n":7080,"name":"Pedro Augusto","p":"Avante"},{"n":7066,"name":"Pr Pastora Sidneia Santos","p":"Avante"},{"n":7045,"name":"Raquel Cantarelli","p":"Avante"},{"n":7008,"name":"Renato Zaca","p":"Avante"},{"n":7032,"name":"Rogerio Riguetti","p":"Avante"},{"n":7067,"name":"Rosaldo Madeiras","p":"Avante"},{"n":7011,"name":"Serafim","p":"Avante"},{"n":7001,"name":"Simone Oliveira","p":"Avante"},{"n":7071,"name":"Simone Pimentel","p":"Avante"},{"n":7078,"name":"Suelen Lima","p":"Avante"},{"n":7070,"name":"Venissius","p":"Avante"},{"n":7021,"name":"Vinicius Lo Bianco","p":"Avante"},{"n":7010,"name":"Viviane Carvalho","p":"Avante"},{"n":7000,"name":"Welington Braga","p":"Avante"},{"n":7055,"name":"Wiliam Emiliano","p":"Avante"},{"n":7040,"name":"Willian Coelho","p":"Avante"}]},{"id":"dc","name":"DC","short":"DC","parties":[{"num":27,"sigla":"DC"}],"candidates":[{"n":2770,"name":"Aghata Almeida","p":"DC"},{"n":2720,"name":"Andrea Sorvetão","p":"DC"},{"n":2744,"name":"André Almeida","p":"DC"},{"n":2780,"name":"Arthur Rioboo","p":"DC"},{"n":2745,"name":"Bill da Piscina","p":"DC"},{"n":2726,"name":"Carlos Cruz Amigo do Social","p":"DC"},{"n":2732,"name":"Carol Monteiro","p":"DC"},{"n":2701,"name":"Cel. Emir Larangeira","p":"DC"},{"n":2750,"name":"Cirlene Mozer","p":"DC"},{"n":2713,"name":"Claudia Araujo","p":"DC"},{"n":2721,"name":"Conceição da Saúde","p":"DC"},{"n":2789,"name":"Cristiane do Roberto Jefferson","p":"DC"},{"n":2730,"name":"Danilo Barreto","p":"DC"},{"n":2710,"name":"Dr.washington Advogado do Povo","p":"DC"},{"n":2733,"name":"Dra. Aline Nascimento","p":"DC"},{"n":2799,"name":"Eriton Marreta da Serra","p":"DC"},{"n":2747,"name":"Felipe Guedes","p":"DC"},{"n":2767,"name":"Flavio Galvão","p":"DC"},{"n":2725,"name":"Francis Araujo","p":"DC"},{"n":2764,"name":"Gerusa Sales","p":"DC"},{"n":2722,"name":"Gustavo Schmidt","p":"DC"},{"n":2707,"name":"Humberto Martins","p":"DC"},{"n":2772,"name":"Iran Ferreira","p":"DC"},{"n":2790,"name":"Isac do Emprego","p":"DC"},{"n":2737,"name":"Jonas de Souza Neto","p":"DC"},{"n":2788,"name":"Jose Muniz","p":"DC"},{"n":2709,"name":"Julio Amaro","p":"DC"},{"n":2779,"name":"Marco Vaz","p":"DC"},{"n":2755,"name":"Marcos Nobre","p":"DC"},{"n":2711,"name":"Mc Hulk da Selva","p":"DC"},{"n":2729,"name":"Omar Damazio","p":"DC"},{"n":2797,"name":"Pastora Vania Aguiar","p":"DC"},{"n":2781,"name":"Paulinho do Aviário","p":"DC"},{"n":2703,"name":"Petterson Santos","p":"DC"},{"n":2708,"name":"Professor Anderson","p":"DC"},{"n":2728,"name":"Rafael Braz","p":"DC"},{"n":2705,"name":"Rogerio Verissimo","p":"DC"},{"n":2777,"name":"Ruimar Mendes","p":"DC"},{"n":2712,"name":"Simone Clara","p":"DC"},{"n":2736,"name":"Simone Crystal","p":"DC"},{"n":2760,"name":"Solange Souza","p":"DC"},{"n":2715,"name":"Soninha Anibal","p":"DC"},{"n":2740,"name":"Vinicius Prudêncio","p":"DC"},{"n":2700,"name":"Wagner Coelho","p":"DC"},{"n":2727,"name":"William Correia","p":"DC"}]},{"id":"democrata","name":"Democrata","short":"Democrata","parties":[{"num":35,"sigla":"Democrata"}],"candidates":[{"n":3544,"name":"Andre Albuquerque","p":"Democrata"},{"n":3515,"name":"Andrea Santos","p":"Democrata"},{"n":3506,"name":"Andreia Campos","p":"Democrata"},{"n":3598,"name":"Betta Maia","p":"Democrata"},{"n":3505,"name":"Bispo Paulo Santos","p":"Democrata"},{"n":3553,"name":"Carla Campos","p":"Democrata"},{"n":3512,"name":"Carla Petris","p":"Democrata"},{"n":3526,"name":"Cissa Monteiro","p":"Democrata"},{"n":3537,"name":"Daniel Oliveira","p":"Democrata"},{"n":3540,"name":"Dr. Nelson Merrow","p":"Democrata"},{"n":3509,"name":"Drª Roselene","p":"Democrata"},{"n":3558,"name":"Drº Tadeu Silva","p":"Democrata"},{"n":3581,"name":"Duda Portela","p":"Democrata"},{"n":3510,"name":"Edinho Brasil","p":"Democrata"},{"n":3527,"name":"Elcio do Instituto","p":"Democrata"},{"n":3593,"name":"Fatima Artesâ","p":"Democrata"},{"n":3514,"name":"Fernanda Fernandes","p":"Democrata"},{"n":3559,"name":"Izabel Helena","p":"Democrata"},{"n":3535,"name":"Jessica Hiath","p":"Democrata"},{"n":3525,"name":"Jô Ramos","p":"Democrata"},{"n":3501,"name":"Klein","p":"Democrata"},{"n":3551,"name":"Leca da Bicicleta","p":"Democrata"},{"n":3528,"name":"Marco Rodrigues","p":"Democrata"},{"n":3508,"name":"Mario Estrela","p":"Democrata"},{"n":3543,"name":"Mauricio Reis","p":"Democrata"},{"n":3503,"name":"Merinha Ramos","p":"Democrata"},{"n":3533,"name":"Mylena do Juarez","p":"Democrata"},{"n":3563,"name":"Mário Malaquias","p":"Democrata"},{"n":3519,"name":"Pastor Jonas de Lima","p":"Democrata"},{"n":3502,"name":"Patriota Leandro Silva","p":"Democrata"},{"n":3507,"name":"Professor Aristeu","p":"Democrata"},{"n":3592,"name":"Professor Gilson Dias","p":"Democrata"},{"n":3564,"name":"Rodolfo Barros","p":"Democrata"},{"n":3522,"name":"Romulo Barreto","p":"Democrata"},{"n":3567,"name":"Rozendo Junior","p":"Democrata"},{"n":3500,"name":"Rubão","p":"Democrata"},{"n":3556,"name":"Russo Eneas","p":"Democrata"},{"n":3530,"name":"Sargento Gilberto Bombeiro","p":"Democrata"},{"n":3555,"name":"Saturnino","p":"Democrata"},{"n":3536,"name":"Thiago Nunes","p":"Democrata"},{"n":3588,"name":"Thiago O Amigo do Povo","p":"Democrata"},{"n":3520,"name":"Wilson Perna Torta","p":"Democrata"}]},{"id":"febr","name":"Federação Brasil da Esperança","short":"FE Brasil (PT/PCdoB/PV)","parties":[{"num":13,"sigla":"PT"},{"num":43,"sigla":"PV"},{"num":65,"sigla":"PCdoB"}],"candidates":[{"n":1311,"name":"Adelson Guedes","p":"PT"},{"n":4303,"name":"Adriana do Povo","p":"PV"},{"n":1304,"name":"Amélia Leal","p":"PT"},{"n":1330,"name":"Anielle Franco","p":"PT"},{"n":4333,"name":"Bandeira de Mello","p":"PV"},{"n":1350,"name":"Benny Briolly","p":"PT"},{"n":1355,"name":"Beny Guerra","p":"PT"},{"n":1302,"name":"Carlos Santana","p":"PT"},{"n":1380,"name":"Celso Pansera","p":"PT"},{"n":1375,"name":"Dani Nunes","p":"PT"},{"n":1313,"name":"Diego Quaqua","p":"PT"},{"n":1301,"name":"Dimas Gadelha","p":"PT"},{"n":1306,"name":"Dr. José Ricardo","p":"PT"},{"n":1344,"name":"Dr. Lobão","p":"PT"},{"n":1342,"name":"Dr. Rubinho","p":"PT"},{"n":1323,"name":"Dra. Crislaine Coelho","p":"PT"},{"n":1370,"name":"Dra. Lucia Costa","p":"PT"},{"n":6577,"name":"Elias Jabbour","p":"PCdoB"},{"n":1332,"name":"Emerson Tdb","p":"PT"},{"n":6556,"name":"Enfermeira Rejane","p":"PCdoB"},{"n":1303,"name":"Fabiano Horta","p":"PT"},{"n":1331,"name":"Freixo","p":"PT"},{"n":6565,"name":"Jandira Feghali","p":"PCdoB"},{"n":1325,"name":"Leo Cdd","p":"PT"},{"n":1300,"name":"Lindbergh","p":"PT"},{"n":1329,"name":"Lourenço do Valle","p":"PT"},{"n":1369,"name":"Luciana Nery","p":"PT"},{"n":4343,"name":"Léo Picciani","p":"PV"},{"n":1307,"name":"Maiara Felicio","p":"PT"},{"n":1399,"name":"Marcelo Pacheco","p":"PT"},{"n":1320,"name":"Márcia Peixoto","p":"PT"},{"n":4313,"name":"Márcia do Pv","p":"PV"},{"n":1310,"name":"Nísia Trindade","p":"PT"},{"n":1347,"name":"Orlando Carioca","p":"PT"},{"n":1367,"name":"Pastor Wagner Avellar","p":"PT"},{"n":4321,"name":"Professor Rodney","p":"PV"},{"n":1333,"name":"Reimont","p":"PT"},{"n":1337,"name":"Rose da Silva","p":"PT"},{"n":1340,"name":"Rubens Bomtempo","p":"PT"},{"n":1314,"name":"Sandrão da Saúde","p":"PT"},{"n":1312,"name":"Sub Antônio Andrade","p":"PT"},{"n":1377,"name":"Tainá de Paula","p":"PT"},{"n":1321,"name":"Valdo Tavares","p":"PT"},{"n":1357,"name":"Vitor Aranha","p":"PT"}]},{"id":"mdb","name":"MDB","short":"MDB","parties":[{"num":15,"sigla":"MDB"}],"candidates":[{"n":1588,"name":"Adele Fatima","p":"MDB"},{"n":1537,"name":"Adely Ozon","p":"MDB"},{"n":1527,"name":"Alice Guimarães","p":"MDB"},{"n":1545,"name":"Aline de Tamoios","p":"MDB"},{"n":1562,"name":"Amanda Santana","p":"MDB"},{"n":1513,"name":"Ap. João Alves","p":"MDB"},{"n":1506,"name":"Arnô da Academia","p":"MDB"},{"n":1526,"name":"Biólogo Henrique","p":"MDB"},{"n":1593,"name":"Brum Galvão","p":"MDB"},{"n":1507,"name":"Charles Maurício","p":"MDB"},{"n":1511,"name":"Christianne Meirelles","p":"MDB"},{"n":1567,"name":"Del Gonçalves","p":"MDB"},{"n":1557,"name":"Diny Menezes","p":"MDB"},{"n":1505,"name":"Elba Barcellos","p":"MDB"},{"n":1551,"name":"Felipe Corrêa","p":"MDB"},{"n":1550,"name":"Fernando Jordão","p":"MDB"},{"n":1556,"name":"Filipe Amaro","p":"MDB"},{"n":1516,"name":"Gutemberg Reis","p":"MDB"},{"n":1574,"name":"Helen Barreto","p":"MDB"},{"n":1573,"name":"La Rubia","p":"MDB"},{"n":1599,"name":"Leandro Ziquinho","p":"MDB"},{"n":1515,"name":"Luciano Guerreiro","p":"MDB"},{"n":1590,"name":"Lúcio Aguiar","p":"MDB"},{"n":1512,"name":"Manuel Neto","p":"MDB"},{"n":1520,"name":"Maycon Freitas","p":"MDB"},{"n":1502,"name":"Miriam Guerreira","p":"MDB"},{"n":1517,"name":"Nelsinho Gari","p":"MDB"},{"n":1522,"name":"Pastor Junior Trovão","p":"MDB"},{"n":1577,"name":"Pastor Paulo Anderson","p":"MDB"},{"n":1503,"name":"Penha Ventura","p":"MDB"},{"n":1509,"name":"Professora Ruth Patrocínio","p":"MDB"},{"n":1501,"name":"Raminho Bigfield","p":"MDB"},{"n":1525,"name":"Raquel Wick","p":"MDB"},{"n":1523,"name":"Rodolfo Belém","p":"MDB"},{"n":1555,"name":"Rodrigo Vizeu","p":"MDB"},{"n":1510,"name":"Thiago Zanata","p":"MDB"},{"n":1533,"name":"Vandrea Furquim","p":"MDB"},{"n":1566,"name":"Victor Mazzei","p":"MDB"},{"n":1530,"name":"Yara Vellasco","p":"MDB"}]},{"id":"missao","name":"Missão","short":"Missão","parties":[{"num":14,"sigla":"Missão"}],"candidates":[{"n":1411,"name":"Cadu Moraes","p":"Missão"},{"n":1422,"name":"Dhebora Paiva","p":"Missão"},{"n":1455,"name":"Dra. Sandra Alves","p":"Missão"},{"n":1494,"name":"Euber Lucas","p":"Missão"},{"n":1407,"name":"Fabricia Lerner","p":"Missão"},{"n":1416,"name":"Igor Oliveira","p":"Missão"},{"n":1412,"name":"Jussara Barbosa","p":"Missão"},{"n":1499,"name":"Leandro Issa","p":"Missão"},{"n":1418,"name":"Leonardo Balbi","p":"Missão"},{"n":1402,"name":"Luana Vidal","p":"Missão"},{"n":1415,"name":"Marcio Labre","p":"Missão"},{"n":1400,"name":"Michel Kouri","p":"Missão"},{"n":1491,"name":"Míriam Carvalho","p":"Missão"},{"n":1456,"name":"Neymar Pesadão da Ilha Grande","p":"Missão"},{"n":1403,"name":"Pastora Esmeralda Borges","p":"Missão"},{"n":1405,"name":"Prof. Mary Socorro","p":"Missão"},{"n":1466,"name":"Renato Alonso","p":"Missão"},{"n":1444,"name":"Saldanha","p":"Missão"},{"n":1477,"name":"Thayenne Perrier","p":"Missão"},{"n":1406,"name":"Thiago Villaça","p":"Missão"},{"n":1414,"name":"Victor Antoun","p":"Missão"},{"n":1433,"name":"Victor Menezes","p":"Missão"},{"n":1401,"name":"Yago Medeiros","p":"Missão"}]},{"id":"mobiliza","name":"Mobiliza","short":"Mobiliza","parties":[{"num":33,"sigla":"Mobiliza"}],"candidates":[{"n":3301,"name":"Alex Leleco","p":"Mobiliza"},{"n":3386,"name":"Aline Mattos","p":"Mobiliza"},{"n":3305,"name":"Amigo Durval","p":"Mobiliza"},{"n":3312,"name":"Barriga Pescador","p":"Mobiliza"},{"n":3307,"name":"Benny Guerreira","p":"Mobiliza"},{"n":3369,"name":"Bianca Naldy","p":"Mobiliza"},{"n":3391,"name":"Bispo Jorge","p":"Mobiliza"},{"n":3306,"name":"Bispo Willyam Guimarães","p":"Mobiliza"},{"n":3323,"name":"Brener Antunes","p":"Mobiliza"},{"n":3360,"name":"Carlinhos Jacaré","p":"Mobiliza"},{"n":3356,"name":"Cegley Na Voz","p":"Mobiliza"},{"n":3310,"name":"Célio Gari","p":"Mobiliza"},{"n":3397,"name":"Daniel Barbosa","p":"Mobiliza"},{"n":3330,"name":"Dra. Maria Amélia","p":"Mobiliza"},{"n":3340,"name":"Drª. Luciana Monteiro","p":"Mobiliza"},{"n":3399,"name":"Edson Pimenta","p":"Mobiliza"},{"n":3339,"name":"Fernanda Mesquita","p":"Mobiliza"},{"n":3350,"name":"Ferreirinha do Hospital","p":"Mobiliza"},{"n":3353,"name":"Finelli","p":"Mobiliza"},{"n":3303,"name":"Flávio Bernardes","p":"Mobiliza"},{"n":3373,"name":"Fábio da Paz","p":"Mobiliza"},{"n":3321,"name":"Gleice Schott","p":"Mobiliza"},{"n":3332,"name":"Guinho","p":"Mobiliza"},{"n":3326,"name":"Jamil Jorge","p":"Mobiliza"},{"n":3343,"name":"Jardanes Oliveira","p":"Mobiliza"},{"n":3390,"name":"Luiz Antonio Serralheiro","p":"Mobiliza"},{"n":3300,"name":"Marcelo do Táxi","p":"Mobiliza"},{"n":3316,"name":"Marcão Borges","p":"Mobiliza"},{"n":3363,"name":"Murilo Moraes","p":"Mobiliza"},{"n":3337,"name":"Neidelly Faustino","p":"Mobiliza"},{"n":3379,"name":"Pastor Amaro Junior da Van","p":"Mobiliza"},{"n":3345,"name":"Pastor William Lopes","p":"Mobiliza"},{"n":3377,"name":"Pastora Antonia","p":"Mobiliza"},{"n":3317,"name":"Paulinho Playboy","p":"Mobiliza"},{"n":3388,"name":"Paulo Lobato","p":"Mobiliza"},{"n":3334,"name":"Paulo Lomenha","p":"Mobiliza"},{"n":3393,"name":"Penha do Viegas","p":"Mobiliza"},{"n":3322,"name":"Ricardo Cêda","p":"Mobiliza"},{"n":3333,"name":"Shirlei Engel","p":"Mobiliza"},{"n":3313,"name":"Vilmar A Guerreira da Zona Oes","p":"Mobiliza"}]},{"id":"novo","name":"Novo","short":"Novo","parties":[{"num":30,"sigla":"Novo"}],"candidates":[{"n":3017,"name":"Adriana Bustamante","p":"Novo"},{"n":3014,"name":"Alex Sabino","p":"Novo"},{"n":3026,"name":"Alexandre Carvalho","p":"Novo"},{"n":3006,"name":"Anna Feio","p":"Novo"},{"n":3090,"name":"Aziel Dias","p":"Novo"},{"n":3077,"name":"Bianca Garcia","p":"Novo"},{"n":3036,"name":"Birinha","p":"Novo"},{"n":3012,"name":"Carla Cout","p":"Novo"},{"n":3002,"name":"Carlos Martins","p":"Novo"},{"n":3001,"name":"Carol Sponza","p":"Novo"},{"n":3020,"name":"Comissário Alex Ferreira","p":"Novo"},{"n":3066,"name":"Dani Roura","p":"Novo"},{"n":3021,"name":"Dayviane Garcia","p":"Novo"},{"n":3000,"name":"Delegado Felício Laterça","p":"Novo"},{"n":3060,"name":"Diego Vaz","p":"Novo"},{"n":3033,"name":"Dr Carlos do Novo","p":"Novo"},{"n":3010,"name":"Dr Sergio Figueiredo","p":"Novo"},{"n":3083,"name":"Dr. Herculano","p":"Novo"},{"n":3050,"name":"Dr. Nino Crebylon","p":"Novo"},{"n":3005,"name":"Euler Bertucio","p":"Novo"},{"n":3044,"name":"Fabi Pessanha","p":"Novo"},{"n":3027,"name":"Gilson Senna","p":"Novo"},{"n":3011,"name":"Giovanna Abreu","p":"Novo"},{"n":3008,"name":"Jayme Neto","p":"Novo"},{"n":3004,"name":"Jonatas Velho","p":"Novo"},{"n":3093,"name":"Juarez da Fisioterapia","p":"Novo"},{"n":3045,"name":"Juliana Fidelis","p":"Novo"},{"n":3069,"name":"Julinho Dborais","p":"Novo"},{"n":3022,"name":"Junior Jl","p":"Novo"},{"n":3015,"name":"Kau Magno","p":"Novo"},{"n":3080,"name":"Kelaine Goulart","p":"Novo"},{"n":3032,"name":"Leda Alves","p":"Novo"},{"n":3055,"name":"Leonel Policiano","p":"Novo"},{"n":3030,"name":"Luiz Lima","p":"Novo"},{"n":3078,"name":"Marcinho","p":"Novo"},{"n":3072,"name":"Pastor Elvis","p":"Novo"},{"n":3003,"name":"Pastor Pedrão","p":"Novo"},{"n":3023,"name":"Pastora Kelly Silva","p":"Novo"},{"n":3034,"name":"Professor Murdoch","p":"Novo"},{"n":3040,"name":"Professor Ralph","p":"Novo"},{"n":3037,"name":"Raphael Gadelha","p":"Novo"},{"n":3035,"name":"Rodrigo Multimidia","p":"Novo"},{"n":3031,"name":"Rosanne Garcia","p":"Novo"},{"n":3099,"name":"Silvia Blumberg","p":"Novo"},{"n":3088,"name":"Thiago Lyra","p":"Novo"},{"n":3073,"name":"Valmir de Almeida","p":"Novo"},{"n":3071,"name":"Washington Sorio","p":"Novo"}]},{"id":"pco","name":"PCO","short":"PCO","parties":[{"num":29,"sigla":"PCO"}],"candidates":[{"n":2989,"name":"Edileuza Ramos","p":"PCO"},{"n":2999,"name":"Eduardo Lopes","p":"PCO"},{"n":2929,"name":"Henrique Simonard","p":"PCO"},{"n":2919,"name":"Jamaica","p":"PCO"},{"n":2900,"name":"Renato Bulhões","p":"PCO"},{"n":2909,"name":"Valéria Barbalho","p":"PCO"}]},{"id":"pdt","name":"PDT","short":"PDT","parties":[{"num":12,"sigla":"PDT"}],"candidates":[{"n":1253,"name":"Adriana Amaral","p":"PDT"},{"n":1215,"name":"Andre Suzano","p":"PDT"},{"n":1218,"name":"Araujo","p":"PDT"},{"n":1234,"name":"Axel Grael","p":"PDT"},{"n":1205,"name":"Bispa Alcione","p":"PDT"},{"n":1292,"name":"Claudio Luiz","p":"PDT"},{"n":1250,"name":"Claudio Vigilante","p":"PDT"},{"n":1233,"name":"Cris Gemeas","p":"PDT"},{"n":1245,"name":"Danilo Peres","p":"PDT"},{"n":1222,"name":"Dejorge Patricio","p":"PDT"},{"n":1240,"name":"Delegada Martha Rocha","p":"PDT"},{"n":1223,"name":"Dr. Luciano Batatinha","p":"PDT"},{"n":1265,"name":"Dr. Marcos \"doutor Hora Bolas\"","p":"PDT"},{"n":1206,"name":"Elaine Sampaio","p":"PDT"},{"n":1299,"name":"Francisco Junior","p":"PDT"},{"n":1243,"name":"Huguinho","p":"PDT"},{"n":1216,"name":"Jonatas Dias","p":"PDT"},{"n":1213,"name":"Jose Diaz","p":"PDT"},{"n":1261,"name":"Lau Furacão","p":"PDT"},{"n":1255,"name":"Leon Gomes","p":"PDT"},{"n":1207,"name":"Lucas Terra","p":"PDT"},{"n":1267,"name":"Marcia Braga","p":"PDT"},{"n":1212,"name":"Marcos Tavares","p":"PDT"},{"n":1270,"name":"Marcão Alves","p":"PDT"},{"n":1262,"name":"Marta Enlale","p":"PDT"},{"n":1242,"name":"Michelle Carvalho","p":"PDT"},{"n":1235,"name":"Moises Boechat","p":"PDT"},{"n":1211,"name":"Monica Moninha","p":"PDT"},{"n":1280,"name":"Nete Hulpan","p":"PDT"},{"n":1251,"name":"Paulão Carvalho","p":"PDT"},{"n":1244,"name":"Rejane da Educação","p":"PDT"},{"n":1210,"name":"Renato Muniz","p":"PDT"},{"n":1288,"name":"Ricardo Aranha","p":"PDT"},{"n":1220,"name":"Ricardo do Material","p":"PDT"},{"n":1277,"name":"Rosangela do Méier","p":"PDT"},{"n":1214,"name":"Sandro Martins","p":"PDT"},{"n":1224,"name":"Stella Gaio","p":"PDT"},{"n":1232,"name":"Thiago Valerio","p":"PDT"},{"n":1225,"name":"Toninho Bondade","p":"PDT"},{"n":1256,"name":"Vigilante Jorge Rosa","p":"PDT"},{"n":1239,"name":"Vinicius Assis","p":"PDT"},{"n":1200,"name":"Vitor Junior","p":"PDT"},{"n":1201,"name":"Wanderson Nogueira","p":"PDT"},{"n":1278,"name":"Will do Guetto","p":"PDT"},{"n":1266,"name":"Zezé Amiga de Fé","p":"PDT"},{"n":1276,"name":"Índio das Cadeiras","p":"PDT"}]},{"id":"pl","name":"PL","short":"PL","parties":[{"num":22,"sigla":"PL"}],"candidates":[{"n":2297,"name":"Adriana da Matta","p":"PL"},{"n":2201,"name":"Alana Passos","p":"PL"},{"n":2269,"name":"Altineu Cortes","p":"PL"},{"n":2221,"name":"Breno Café Com Teu Pai","p":"PL"},{"n":2214,"name":"Chris Tonietto","p":"PL"},{"n":2238,"name":"Coronel Principe","p":"PL"},{"n":2233,"name":"Dani Cunha","p":"PL"},{"n":2256,"name":"Davi Pqd","p":"PL"},{"n":2228,"name":"Delegada Patrícia Aguiar","p":"PL"},{"n":2226,"name":"Delegado Antonio Furtado","p":"PL"},{"n":2211,"name":"Diogo Balieiro Diniz","p":"PL"},{"n":2299,"name":"Douglas Gomes","p":"PL"},{"n":2246,"name":"Dr Maurilio","p":"PL"},{"n":2266,"name":"Dr Rodrigo Furtado","p":"PL"},{"n":2245,"name":"Dr. Flávio","p":"PL"},{"n":2207,"name":"Ed Raposo","p":"PL"},{"n":2212,"name":"General Pazuello","p":"PL"},{"n":2255,"name":"Gutemberg Fonseca","p":"PL"},{"n":2263,"name":"Hazenclever Lopes","p":"PL"},{"n":2210,"name":"Igor Porto","p":"PL"},{"n":2220,"name":"Jean Bolsonaro","p":"PL"},{"n":2234,"name":"Jorge Miranda","p":"PL"},{"n":2202,"name":"Julia de Castro","p":"PL"},{"n":2232,"name":"Keila \"acaba Não Mundão\"","p":"PL"},{"n":2288,"name":"Lais Jordy","p":"PL"},{"n":2247,"name":"Luizinho Patriota","p":"PL"},{"n":2200,"name":"Manoela Peres","p":"PL"},{"n":2204,"name":"Marcello Capparelli","p":"PL"},{"n":2270,"name":"Marinara","p":"PL"},{"n":2296,"name":"Matheus Quintal","p":"PL"},{"n":2215,"name":"Matildes Silveira","p":"PL"},{"n":2262,"name":"Poubel","p":"PL"},{"n":2242,"name":"Prof. Mauro Rosa","p":"PL"},{"n":2237,"name":"Rafael Satiê","p":"PL"},{"n":2217,"name":"Rebeca Ramagem","p":"PL"},{"n":2223,"name":"Renato Araújo","p":"PL"},{"n":2252,"name":"Ricardo Netuno","p":"PL"},{"n":2250,"name":"Roberto Monteiro-Pai","p":"PL"},{"n":2244,"name":"Rogeria Bolsonaro","p":"PL"},{"n":2216,"name":"Sandra Santos","p":"PL"},{"n":2208,"name":"Sargento Gurgel","p":"PL"},{"n":2240,"name":"Sgt Batata","p":"PL"},{"n":2222,"name":"Soraya Santos","p":"PL"},{"n":2277,"name":"Sóstenes Cavalcante","p":"PL"},{"n":2227,"name":"Thiago Gagliasso","p":"PL"},{"n":2230,"name":"Vanessa Silva","p":"PL"},{"n":2258,"name":"Wladimir Garotinho","p":"PL"}]},{"id":"pode","name":"Podemos","short":"Podemos","parties":[{"num":20,"sigla":"Podemos"}],"candidates":[{"n":2074,"name":"Alex Brizola","p":"Podemos"},{"n":2007,"name":"Alexandre Lustosa","p":"Podemos"},{"n":2085,"name":"Ana Bantim","p":"Podemos"},{"n":2011,"name":"Ana Cottas","p":"Podemos"},{"n":2001,"name":"Aquino do Papa","p":"Podemos"},{"n":2023,"name":"Arlene Oliveira","p":"Podemos"},{"n":2061,"name":"Carlos A Valdevino Carlão","p":"Podemos"},{"n":2070,"name":"Carlos Stutz","p":"Podemos"},{"n":2021,"name":"Douglas Andrade","p":"Podemos"},{"n":2089,"name":"Doutor Porfirio","p":"Podemos"},{"n":2090,"name":"Eliane Faria","p":"Podemos"},{"n":2067,"name":"Everaldo Anselmo","p":"Podemos"},{"n":2020,"name":"Filipe Pereira","p":"Podemos"},{"n":2027,"name":"Gabrielle Anjos","p":"Podemos"},{"n":2010,"name":"Haroldo Filho","p":"Podemos"},{"n":2004,"name":"Isabela Abreu","p":"Podemos"},{"n":2068,"name":"Jecinete Dias Picolé","p":"Podemos"},{"n":2012,"name":"John John","p":"Podemos"},{"n":2051,"name":"Luis Alegria do Passarinheiro","p":"Podemos"},{"n":2022,"name":"Marcelle Lucas","p":"Podemos"},{"n":2052,"name":"Marcelo Pedro","p":"Podemos"},{"n":2053,"name":"Marcus Fusco","p":"Podemos"},{"n":2088,"name":"Marlyce da Inclusão","p":"Podemos"},{"n":2031,"name":"Ney Carlos","p":"Podemos"},{"n":2050,"name":"Niltinho Mototáxi","p":"Podemos"},{"n":2075,"name":"Pastor Renato Rocha","p":"Podemos"},{"n":2060,"name":"Paulo da Ceasa","p":"Podemos"},{"n":2043,"name":"Professor Rubens da Saúde","p":"Podemos"},{"n":2025,"name":"Professora Cristina Ritins","p":"Podemos"},{"n":2036,"name":"Rafael Matos Dr.do Povo","p":"Podemos"},{"n":2002,"name":"Ravel Soares","p":"Podemos"},{"n":2000,"name":"Sargento Portugal","p":"Podemos"},{"n":2040,"name":"Silvana da Fazenda da Laje","p":"Podemos"},{"n":2059,"name":"Stoppa","p":"Podemos"},{"n":2018,"name":"Tatiana Agda","p":"Podemos"},{"n":2055,"name":"Thiago Gedeon","p":"Podemos"},{"n":2017,"name":"Thiago Nazareth","p":"Podemos"},{"n":2047,"name":"Tia Jô do Povo","p":"Podemos"},{"n":2019,"name":"Toni Carvalho","p":"Podemos"},{"n":2077,"name":"Vilela","p":"Podemos"},{"n":2044,"name":"Wagner Coe","p":"Podemos"},{"n":2008,"name":"Wilson Sousa","p":"Podemos"}]},{"id":"rensol","name":"Federação Renovação Solidária","short":"PRD/Solidariedade","parties":[{"num":25,"sigla":"PRD"},{"num":77,"sigla":"Solidariedade"}],"candidates":[{"n":7720,"name":"Anderson Bravo","p":"Solidariedade"},{"n":7703,"name":"Andréa Araújo","p":"Solidariedade"},{"n":7733,"name":"Aureo Ribeiro","p":"Solidariedade"},{"n":7744,"name":"Beny Balabram","p":"Solidariedade"},{"n":7793,"name":"Coronel Lauro Botto","p":"Solidariedade"},{"n":7755,"name":"Coronel Vasconcellos","p":"Solidariedade"},{"n":7701,"name":"Dr. Ricardo Ursine","p":"Solidariedade"},{"n":2540,"name":"Dr. Willian Brand","p":"PRD"},{"n":2567,"name":"Dr.rui","p":"PRD"},{"n":7789,"name":"Dra. Ellis","p":"Solidariedade"},{"n":7769,"name":"Edson do Paraíso","p":"Solidariedade"},{"n":7759,"name":"Edson dos Santos","p":"Solidariedade"},{"n":7712,"name":"Eloi Ramalho","p":"Solidariedade"},{"n":2555,"name":"Eloi Varão","p":"PRD"},{"n":2512,"name":"Erica Bispo","p":"PRD"},{"n":7770,"name":"Gisele Lancates","p":"Solidariedade"},{"n":7767,"name":"Glauber Poubel","p":"Solidariedade"},{"n":2522,"name":"Gleibe de Andrade","p":"PRD"},{"n":7773,"name":"Janayna Rodrigues","p":"Solidariedade"},{"n":7711,"name":"Jones Moura","p":"Solidariedade"},{"n":2525,"name":"José de Dj","p":"PRD"},{"n":2500,"name":"Kelly Ferreira","p":"PRD"},{"n":7741,"name":"Leandro Peixe","p":"Solidariedade"},{"n":7775,"name":"Lenilton Rodrigues","p":"Solidariedade"},{"n":7722,"name":"Luis Marta","p":"Solidariedade"},{"n":2538,"name":"Marcelo Magarça","p":"PRD"},{"n":7700,"name":"Marcelo Nascimento","p":"Solidariedade"},{"n":2523,"name":"Marcus Vinicius Neskau","p":"PRD"},{"n":7710,"name":"Marquinhos da Reciclagem","p":"Solidariedade"},{"n":7778,"name":"Michel Vila Nova","p":"Solidariedade"},{"n":7784,"name":"Michele Nascimento","p":"Solidariedade"},{"n":7714,"name":"Mário Gomes","p":"Solidariedade"},{"n":7737,"name":"Mãe Manu da Oxum","p":"Solidariedade"},{"n":2577,"name":"Nurimar do Comércio","p":"PRD"},{"n":2533,"name":"Paola Daniel","p":"PRD"},{"n":7788,"name":"Pastor Edgar Costa","p":"Solidariedade"},{"n":7702,"name":"Patricia Cardoso","p":"Solidariedade"},{"n":7743,"name":"Pra. Elizangela Terra","p":"Solidariedade"},{"n":7787,"name":"Roberto Beleza","p":"Solidariedade"},{"n":7779,"name":"Robson Santos","p":"Solidariedade"},{"n":2566,"name":"Ronaldo Anquieta","p":"PRD"},{"n":7777,"name":"Sarah Poncio","p":"Solidariedade"},{"n":7723,"name":"Thiago da Saúde","p":"Solidariedade"},{"n":7727,"name":"Tia Vanessa","p":"Solidariedade"},{"n":7707,"name":"Viviane Petisco","p":"Solidariedade"},{"n":7717,"name":"Wilson Protetor","p":"Solidariedade"}]},{"id":"psb","name":"PSB","short":"PSB","parties":[{"num":40,"sigla":"PSB"}],"candidates":[{"n":4069,"name":"Ademir Máximo Respeito","p":"PSB"},{"n":4048,"name":"Adriely Osório","p":"PSB"},{"n":4077,"name":"André Petinha","p":"PSB"},{"n":4099,"name":"Ary Girota","p":"PSB"},{"n":4023,"name":"Barbara Cristina","p":"PSB"},{"n":4070,"name":"Carol Midori","p":"PSB"},{"n":4040,"name":"Chico Rubens Paiva","p":"PSB"},{"n":4044,"name":"Darla Muniz","p":"PSB"},{"n":4087,"name":"Darlan Praxedes","p":"PSB"},{"n":4007,"name":"Dr Adriano Rocha","p":"PSB"},{"n":4055,"name":"Dra Chris Lopes","p":"PSB"},{"n":4001,"name":"Eduardo Furtado","p":"PSB"},{"n":4018,"name":"Elaine Ferreira","p":"PSB"},{"n":4067,"name":"Evandro Maza Fg","p":"PSB"},{"n":4088,"name":"Graciane Mauricio","p":"PSB"},{"n":4080,"name":"Igor Crespo","p":"PSB"},{"n":4064,"name":"Ivana Moreira","p":"PSB"},{"n":4024,"name":"Jadson Factualrj","p":"PSB"},{"n":4004,"name":"Janaina Sant'anna","p":"PSB"},{"n":4059,"name":"João Henrique","p":"PSB"},{"n":4012,"name":"João Leonel Batista Estery","p":"PSB"},{"n":4016,"name":"Karina da Saúde","p":"PSB"},{"n":4065,"name":"Marcus São Thiago","p":"PSB"},{"n":4015,"name":"Marko Patrício","p":"PSB"},{"n":4002,"name":"Maysa Lourenço","p":"PSB"},{"n":4017,"name":"Miguelito","p":"PSB"},{"n":4078,"name":"Nestor Lopes de Madalena","p":"PSB"},{"n":4003,"name":"Paula do Volei","p":"PSB"},{"n":4030,"name":"Paulo Angelito","p":"PSB"},{"n":4090,"name":"Pratinha","p":"PSB"},{"n":4060,"name":"Professor Ivanir dos Santos","p":"PSB"},{"n":4000,"name":"Professor José","p":"PSB"},{"n":4022,"name":"Professor Leonardo","p":"PSB"},{"n":4050,"name":"Rafael Primo","p":"PSB"},{"n":4081,"name":"Rafael do Bem","p":"PSB"},{"n":4010,"name":"Romério Duarte","p":"PSB"},{"n":4045,"name":"Rômulo Milagres","p":"PSB"},{"n":4019,"name":"Samuel Fayad","p":"PSB"},{"n":4020,"name":"Sandra Teixeira","p":"PSB"},{"n":4066,"name":"Selminha Sorriso","p":"PSB"},{"n":4033,"name":"Serginho da Sinuca","p":"PSB"},{"n":4032,"name":"Sidney Jesus","p":"PSB"},{"n":4006,"name":"Sustentare Idália","p":"PSB"},{"n":4013,"name":"Tatiana Roque","p":"PSB"},{"n":4014,"name":"Vagner Martins","p":"PSB"},{"n":4027,"name":"Vanessinha Monteiro","p":"PSB"},{"n":4021,"name":"Verônica Inácio","p":"PSB"}]},{"id":"psd","name":"PSD","short":"PSD","parties":[{"num":55,"sigla":"PSD"}],"candidates":[{"n":5580,"name":"Alca Moura","p":"PSD"},{"n":5506,"name":"Alexandre Beça","p":"PSD"},{"n":5590,"name":"Azra El Akbar","p":"PSD"},{"n":5567,"name":"Cleibe do Rio","p":"PSD"},{"n":5505,"name":"Dailva Basilio","p":"PSD"},{"n":5588,"name":"Daniel Soranz","p":"PSD"},{"n":5599,"name":"Dr. Paulo Cesar","p":"PSD"},{"n":5597,"name":"Drª. Vivian Alencar","p":"PSD"},{"n":5545,"name":"Edimar Teixeira","p":"PSD"},{"n":5570,"name":"Edimara Celi","p":"PSD"},{"n":5502,"name":"Elyane Souza","p":"PSD"},{"n":5565,"name":"Fabinho Fernandes","p":"PSD"},{"n":5509,"name":"Fabinho da Feira","p":"PSD"},{"n":5560,"name":"Felipe Brasileiro","p":"PSD"},{"n":5522,"name":"Flavia Cabeleireira","p":"PSD"},{"n":5503,"name":"Francis Chocollat","p":"PSD"},{"n":5587,"name":"Giancarlo de Trânsito","p":"PSD"},{"n":5532,"name":"Gilmar Lelis","p":"PSD"},{"n":5510,"name":"Hugo Leal","p":"PSD"},{"n":5533,"name":"Joa","p":"PSD"},{"n":5566,"name":"Laura Carneiro","p":"PSD"},{"n":5589,"name":"Lourival Gomes","p":"PSD"},{"n":5575,"name":"Lu Rufino Miss Cadeirante","p":"PSD"},{"n":5562,"name":"Luciane Costa","p":"PSD"},{"n":5577,"name":"Marcelo Diniz","p":"PSD"},{"n":5535,"name":"Marcelo Verly","p":"PSD"},{"n":5555,"name":"Marcio Ribeiro","p":"PSD"},{"n":5544,"name":"Marcos Abrahão Filho","p":"PSD"},{"n":5557,"name":"Maria Angelica","p":"PSD"},{"n":5500,"name":"Michelle da Corrente do Bem","p":"PSD"},{"n":5523,"name":"Márcio Rezende","p":"PSD"},{"n":5550,"name":"Otoni de Paula","p":"PSD"},{"n":5508,"name":"Paiva","p":"PSD"},{"n":5585,"name":"Patrick Lima","p":"PSD"},{"n":5507,"name":"Paulo Queiroz","p":"PSD"},{"n":5501,"name":"Rafael Aloisio Freitas","p":"PSD"},{"n":5521,"name":"Renan Ferreirinha","p":"PSD"},{"n":5569,"name":"Renato Garcia","p":"PSD"},{"n":5530,"name":"Roberta Mendes","p":"PSD"},{"n":5525,"name":"Salvino Oliveira","p":"PSD"},{"n":5540,"name":"Sherazade","p":"PSD"},{"n":5518,"name":"Silvia Arão","p":"PSD"},{"n":5512,"name":"Tango","p":"PSD"},{"n":5561,"name":"Vando Luz","p":"PSD"}]},{"id":"psdbcid","name":"Federação PSDB Cidadania","short":"PSDB/Cidadania","parties":[{"num":23,"sigla":"Cidadania"},{"num":45,"sigla":"PSDB"}],"candidates":[{"n":4570,"name":"Adriano Serfiotis","p":"PSDB"},{"n":4566,"name":"Alexandre Prado","p":"PSDB"},{"n":4505,"name":"Almeida do Progresso","p":"PSDB"},{"n":4599,"name":"Anderson Campos","p":"PSDB"},{"n":4540,"name":"Antônia Fontenelle","p":"PSDB"},{"n":4512,"name":"Caio Vianna","p":"PSDB"},{"n":4535,"name":"Cesar Dórea","p":"PSDB"},{"n":4551,"name":"Cristiano","p":"PSDB"},{"n":4553,"name":"Cristina Mel","p":"PSDB"},{"n":4578,"name":"Doutor Danilo","p":"PSDB"},{"n":4504,"name":"Dr. Aluízio","p":"PSDB"},{"n":4522,"name":"Dr. João","p":"PSDB"},{"n":4588,"name":"Dra. Adriana Kutwak","p":"PSDB"},{"n":4510,"name":"Edmundo","p":"PSDB"},{"n":4515,"name":"Eliane da Saúde","p":"PSDB"},{"n":4589,"name":"Fatinha","p":"PSDB"},{"n":4502,"name":"Flavio Saldanha","p":"PSDB"},{"n":4521,"name":"Graça","p":"PSDB"},{"n":2344,"name":"Iza Dutra","p":"Cidadania"},{"n":2323,"name":"Jack Calderini","p":"Cidadania"},{"n":4533,"name":"Jessica Araújo","p":"PSDB"},{"n":4580,"name":"João Diniz Avc","p":"PSDB"},{"n":4575,"name":"João Victor Família","p":"PSDB"},{"n":4550,"name":"Juliana Benício","p":"PSDB"},{"n":4554,"name":"Juninho do Pneu","p":"PSDB"},{"n":4569,"name":"Lilian Medeiros","p":"PSDB"},{"n":4545,"name":"Luciano Vieira","p":"PSDB"},{"n":4532,"name":"Mago do App","p":"PSDB"},{"n":4557,"name":"Mara Damasceno","p":"PSDB"},{"n":4500,"name":"Marcelo Queiroz","p":"PSDB"},{"n":4577,"name":"Marcia Valentim","p":"PSDB"},{"n":4555,"name":"Marcos Braz","p":"PSDB"},{"n":4567,"name":"Marcos Rr Soares","p":"PSDB"},{"n":4546,"name":"Maurício Bm","p":"PSDB"},{"n":4556,"name":"Munique Busson","p":"PSDB"},{"n":4552,"name":"Murillo Gouvêa","p":"PSDB"},{"n":4543,"name":"Mário Esteves","p":"PSDB"},{"n":4520,"name":"Prof. Jonatas Castelo Branco","p":"PSDB"},{"n":4544,"name":"Ricardo Abrão","p":"PSDB"},{"n":4565,"name":"Rosane Felix","p":"PSDB"},{"n":4525,"name":"Severino Dias","p":"PSDB"},{"n":4590,"name":"Subtenente Bernardo","p":"PSDB"},{"n":4523,"name":"Sérgio Pina","p":"PSDB"},{"n":4501,"name":"Talita Galhardo","p":"PSDB"},{"n":4511,"name":"Tayane Mãe do Gui","p":"PSDB"},{"n":4585,"name":"Tiago Careca","p":"PSDB"}]},{"id":"psolrede","name":"Federação PSOL REDE","short":"PSOL/Rede","parties":[{"num":18,"sigla":"Rede"},{"num":50,"sigla":"PSOL"}],"candidates":[{"n":5013,"name":"Amanda Costa","p":"PSOL"},{"n":5042,"name":"André Barros","p":"PSOL"},{"n":5067,"name":"Ariane Magalhães","p":"PSOL"},{"n":5050,"name":"Chico Alencar","p":"PSOL"},{"n":5015,"name":"Crânio","p":"PSOL"},{"n":5060,"name":"Delma","p":"PSOL"},{"n":5055,"name":"Dr Denilson Prata","p":"PSOL"},{"n":5012,"name":"Dr Emanuel Torquato","p":"PSOL"},{"n":5016,"name":"Fernanda Vieira","p":"PSOL"},{"n":5028,"name":"Fernando Nascimento","p":"PSOL"},{"n":5024,"name":"Frentista Hayres Muniz","p":"PSOL"},{"n":5080,"name":"Glauber Braga","p":"PSOL"},{"n":1824,"name":"Glauco Costa","p":"Rede"},{"n":5021,"name":"Guilherme Pimentel","p":"PSOL"},{"n":1818,"name":"Heloísa Helena","p":"Rede"},{"n":5007,"name":"Júlia Casamasso","p":"PSOL"},{"n":5051,"name":"Noel","p":"PSOL"},{"n":5001,"name":"Pastor Henrique Vieira","p":"PSOL"},{"n":5020,"name":"Professora Miriana","p":"PSOL"},{"n":5005,"name":"Rafael Ribeiro","p":"PSOL"},{"n":5044,"name":"Rick Azevedo","p":"PSOL"},{"n":5077,"name":"Talíria Petrone","p":"PSOL"},{"n":5000,"name":"Tarcísio Motta","p":"PSOL"},{"n":5022,"name":"Wilians Douglas","p":"PSOL"}]},{"id":"pstu","name":"PSTU","short":"PSTU","parties":[{"num":16,"sigla":"PSTU"}],"candidates":[{"n":1660,"name":"Barbara Sinedino","p":"PSTU"},{"n":1616,"name":"Elias Alfredo","p":"PSTU"}]},{"id":"republicanos","name":"Republicanos","short":"Republicanos","parties":[{"num":10,"sigla":"Republicanos"}],"candidates":[{"n":1063,"name":"Adalberto","p":"Republicanos"},{"n":1044,"name":"Alcione Marrom Amancio","p":"Republicanos"},{"n":1071,"name":"Alessandro Sb Salva Brasil","p":"Republicanos"},{"n":1011,"name":"Alex Braz","p":"Republicanos"},{"n":1013,"name":"Alexandre Rodrigues","p":"Republicanos"},{"n":1001,"name":"Alfredo do Belo","p":"Republicanos"},{"n":1068,"name":"Aline Caputi","p":"Republicanos"},{"n":1080,"name":"André Português","p":"Republicanos"},{"n":1027,"name":"Brendow Lincoln","p":"Republicanos"},{"n":1077,"name":"Bruno Nascimento","p":"Republicanos"},{"n":1022,"name":"Celita Toledo","p":"Republicanos"},{"n":1037,"name":"Daiana Mozer","p":"Republicanos"},{"n":1045,"name":"Daniela do Waguinho","p":"Republicanos"},{"n":1034,"name":"Davi Loureiro","p":"Republicanos"},{"n":1007,"name":"David Pardinho","p":"Republicanos"},{"n":1040,"name":"Delegado Deuler","p":"Republicanos"},{"n":1081,"name":"Dr João Vaz","p":"Republicanos"},{"n":1030,"name":"Dra Talita Barbosa","p":"Republicanos"},{"n":1020,"name":"Edson Recicla","p":"Republicanos"},{"n":1093,"name":"Emilio Bombeiro","p":"Republicanos"},{"n":1012,"name":"Fabiano Gonçalves","p":"Republicanos"},{"n":1054,"name":"Ivan Inacio","p":"Republicanos"},{"n":1003,"name":"Ivania Martins","p":"Republicanos"},{"n":1088,"name":"Livia de Chiquinho","p":"Republicanos"},{"n":1035,"name":"Luciano Alves","p":"Republicanos"},{"n":1010,"name":"Luis Carlos Gomes","p":"Republicanos"},{"n":1066,"name":"Magdala Furtado","p":"Republicanos"},{"n":1046,"name":"Major Aislan","p":"Republicanos"},{"n":1023,"name":"Marcelo Rizzi","p":"Republicanos"},{"n":1005,"name":"Michelly Rodrigues","p":"Republicanos"},{"n":1067,"name":"Missionaria Carla","p":"Republicanos"},{"n":1006,"name":"Nathalia Carvalho","p":"Republicanos"},{"n":1000,"name":"Pastor Alex Gonçalves","p":"Republicanos"},{"n":1072,"name":"Pedro da Costa","p":"Republicanos"},{"n":1016,"name":"Professor Joziel","p":"Republicanos"},{"n":1050,"name":"Professor Leandro Azevedo","p":"Republicanos"},{"n":1055,"name":"Professora Amanda","p":"Republicanos"},{"n":1015,"name":"Rodrigo Barbeiro","p":"Republicanos"},{"n":1033,"name":"Rosangela Gomes","p":"Republicanos"},{"n":1078,"name":"Taty Furacão","p":"Republicanos"},{"n":1084,"name":"Vet. L. Cesar","p":"Republicanos"},{"n":1099,"name":"Ze Roberto Amigo do Povo","p":"Republicanos"},{"n":1014,"name":"Zoinho","p":"Republicanos"}]},{"id":"uniprog","name":"Federação União Progressista","short":"União/PP","parties":[{"num":11,"sigla":"PP"},{"num":44,"sigla":"União"}],"candidates":[{"n":1116,"name":"Alexandra Ferro","p":"PP"},{"n":1133,"name":"Bebeto","p":"PP"},{"n":4400,"name":"Bernardo Rossi","p":"União"},{"n":4467,"name":"Bruno Marini","p":"União"},{"n":4411,"name":"Carol Nunes","p":"União"},{"n":4424,"name":"Charlles Batista","p":"União"},{"n":4499,"name":"Clebio Lopes Jacaré","p":"União"},{"n":1180,"name":"Cristiane Viegas","p":"PP"},{"n":4422,"name":"Delegada Madeleine","p":"União"},{"n":1122,"name":"Delegado Felipe Curi","p":"PP"},{"n":1155,"name":"Dr Dilson Drumond","p":"PP"},{"n":4488,"name":"Dr Luis Fernando","p":"União"},{"n":1107,"name":"Dr. Alcio Pereira","p":"PP"},{"n":1199,"name":"Dr. Christiano Alvernaz","p":"PP"},{"n":1170,"name":"Dr. Galvão O Médico Federal","p":"PP"},{"n":1177,"name":"Dr. Luizinho","p":"PP"},{"n":4466,"name":"Dra. Angela Tenório","p":"União"},{"n":4427,"name":"Dra. Emanoele Freitas","p":"União"},{"n":4456,"name":"Flávio Ganem","p":"União"},{"n":4470,"name":"Garet","p":"União"},{"n":1144,"name":"Isabel Ribeiro","p":"PP"},{"n":1120,"name":"Isoldinha","p":"PP"},{"n":1111,"name":"Julio Lopes","p":"PP"},{"n":1100,"name":"Leniel Borel","p":"PP"},{"n":1132,"name":"Leny da Africa","p":"PP"},{"n":1123,"name":"Leo Mendes","p":"PP"},{"n":4452,"name":"Letícia Lyra","p":"União"},{"n":1188,"name":"Luan Lennon","p":"PP"},{"n":4403,"name":"Marcos Almeida","p":"União"},{"n":1147,"name":"Mariana de Souza","p":"PP"},{"n":1190,"name":"Marlon Piposhow","p":"PP"},{"n":1134,"name":"Mauricio Carvalho","p":"PP"},{"n":4490,"name":"Max","p":"União"},{"n":4447,"name":"Natacha Alves","p":"União"},{"n":1121,"name":"Natcha Dias","p":"PP"},{"n":4455,"name":"Nino de Itaboraí","p":"União"},{"n":4412,"name":"Renan Marassi","p":"União"},{"n":1101,"name":"Renato Cozzolino","p":"PP"},{"n":1108,"name":"Rosy Trovão","p":"PP"},{"n":4444,"name":"Rueda","p":"União"},{"n":1112,"name":"Sancler Mello","p":"PP"},{"n":4469,"name":"Soninha de Quintino","p":"União"},{"n":4433,"name":"Thiago Limão","p":"União"},{"n":4413,"name":"Tia Cris","p":"União"},{"n":4415,"name":"Vinicius Farah","p":"União"},{"n":1110,"name":"Viviane Fernandes","p":"PP"},{"n":4479,"name":"Wellington José","p":"União"}]},{"id":"up","name":"UP","short":"UP","parties":[{"num":80,"sigla":"UP"}],"candidates":[{"n":8000,"name":"Esteban Crescente","p":"UP"},{"n":8080,"name":"Pétala","p":"UP"}]}]},"est":{"seats":70,"lists":[{"id":"agir","name":"Agir","short":"Agir","parties":[{"num":36,"sigla":"Agir"}],"candidates":[{"n":36433,"name":"Alex Melim","p":"Agir"},{"n":36644,"name":"Alex Oliveira","p":"Agir"},{"n":36012,"name":"Aline Lossano","p":"Agir"},{"n":36366,"name":"Cecel Santos","p":"Agir"},{"n":36200,"name":"Cezario","p":"Agir"},{"n":36555,"name":"Coronel Lenise Durão","p":"Agir"},{"n":36222,"name":"Danielzinho","p":"Agir"},{"n":36011,"name":"David Lourenço","p":"Agir"},{"n":36008,"name":"Delegado Ruchester","p":"Agir"},{"n":36700,"name":"Dr Cury-Habib","p":"Agir"},{"n":36963,"name":"Dra. Glaura","p":"Agir"},{"n":36110,"name":"Dra. Valeria Matos","p":"Agir"},{"n":36005,"name":"Débora Causa Animal","p":"Agir"},{"n":36300,"name":"Eder Costa, O Edinho","p":"Agir"},{"n":36989,"name":"Elis Queridinha","p":"Agir"},{"n":36123,"name":"Fabiani Vasconcellos","p":"Agir"},{"n":36026,"name":"Fabão Fulltimetv","p":"Agir"},{"n":36363,"name":"Francisco Nacelio","p":"Agir"},{"n":36777,"name":"Gabriel Mielgo","p":"Agir"},{"n":36006,"name":"Gilmar Henrique","p":"Agir"},{"n":36476,"name":"Gustavo Manicuro","p":"Agir"},{"n":36611,"name":"Gustavo Vilela","p":"Agir"},{"n":36151,"name":"Henrique Piu-Piu","p":"Agir"},{"n":36111,"name":"Igor Gringo","p":"Agir"},{"n":36999,"name":"Ildinho Resende","p":"Agir"},{"n":36367,"name":"Jaqueline Costa","p":"Agir"},{"n":36615,"name":"Jorge de Austin","p":"Agir"},{"n":36707,"name":"Juciane Passeata das Mães","p":"Agir"},{"n":36036,"name":"Julio Rocha","p":"Agir"},{"n":36456,"name":"Keila do Toldo","p":"Agir"},{"n":36987,"name":"Kátia da Saúde","p":"Agir"},{"n":36000,"name":"Luciana Polati","p":"Agir"},{"n":36027,"name":"Luizeleres","p":"Agir"},{"n":36002,"name":"Luzia Lopes","p":"Agir"},{"n":36789,"name":"Léo Taí O Zorro de Caxias","p":"Agir"},{"n":36444,"name":"Marcelo Lajes","p":"Agir"},{"n":36321,"name":"Marcus Naval","p":"Agir"},{"n":36127,"name":"Marli Alves","p":"Agir"},{"n":36622,"name":"Marlon Rocha","p":"Agir"},{"n":36223,"name":"Marotte Já É","p":"Agir"},{"n":36022,"name":"Marquinho do Povo","p":"Agir"},{"n":36003,"name":"Mc Dhama","p":"Agir"},{"n":36888,"name":"Márcio Pequeno","p":"Agir"},{"n":36600,"name":"Pastor do Peixe","p":"Agir"},{"n":36122,"name":"Patrícia Potira","p":"Agir"},{"n":36193,"name":"Paulo da Rayssa","p":"Agir"},{"n":36233,"name":"Poroca","p":"Agir"},{"n":36333,"name":"Prof. Renato Fifiu","p":"Agir"},{"n":36361,"name":"Professor Davi Silva","p":"Agir"},{"n":36522,"name":"Professor Lenine","p":"Agir"},{"n":36021,"name":"Professora Bárbara Oliveira","p":"Agir"},{"n":36900,"name":"Rambo do Buá","p":"Agir"},{"n":36061,"name":"Ricardo Tinha","p":"Agir"},{"n":36190,"name":"Rogeria Quaresma","p":"Agir"},{"n":36007,"name":"Rogério 007","p":"Agir"},{"n":36014,"name":"Sargento Martins","p":"Agir"},{"n":36077,"name":"Serginho Hd","p":"Agir"},{"n":36439,"name":"Subtenente Mesac Bombeiro","p":"Agir"},{"n":36033,"name":"Tadala","p":"Agir"},{"n":36001,"name":"Tales Custódio","p":"Agir"},{"n":36108,"name":"Thaís Tostes","p":"Agir"},{"n":36100,"name":"Thimotinho","p":"Agir"},{"n":36085,"name":"Tia Glaucia","p":"Agir"},{"n":36288,"name":"Valentim Pet","p":"Agir"},{"n":36565,"name":"Victor Aguiar","p":"Agir"},{"n":36500,"name":"Victor Setaro","p":"Agir"},{"n":36677,"name":"Viviane Cariello","p":"Agir"},{"n":36016,"name":"Wanderley Corretor","p":"Agir"},{"n":36800,"name":"Wellington Baptista","p":"Agir"}]},{"id":"avante","name":"Avante","short":"Avante","parties":[{"num":70,"sigla":"Avante"}],"candidates":[{"n":70678,"name":"Alan Kardeck","p":"Avante"},{"n":70776,"name":"Alberto Rangel","p":"Avante"},{"n":70456,"name":"Alcemir Maciel","p":"Avante"},{"n":70555,"name":"Alexandre Salgado","p":"Avante"},{"n":70838,"name":"Alibaba do Magaça","p":"Avante"},{"n":70014,"name":"Alisson Coc","p":"Avante"},{"n":70123,"name":"Almir Rangel","p":"Avante"},{"n":70666,"name":"Ana Lucia Costa","p":"Avante"},{"n":70474,"name":"Anderson Pessanha","p":"Avante"},{"n":70533,"name":"Bispo Marcelo","p":"Avante"},{"n":70019,"name":"Bruno da Academia","p":"Avante"},{"n":70321,"name":"Cautela","p":"Avante"},{"n":70345,"name":"Chiquinho da Mangueira","p":"Avante"},{"n":70077,"name":"Cris do Carneirinho","p":"Avante"},{"n":70931,"name":"Cristiano Santos","p":"Avante"},{"n":70523,"name":"Daizinho","p":"Avante"},{"n":70544,"name":"Diana Lima","p":"Avante"},{"n":70015,"name":"Dilson de Luca","p":"Avante"},{"n":70777,"name":"Doutor Luisinho Junior","p":"Avante"},{"n":70193,"name":"Dr Bruno Bombeiro","p":"Avante"},{"n":70132,"name":"Drika","p":"Avante"},{"n":70111,"name":"Eduardo Cabral","p":"Avante"},{"n":70100,"name":"Elias de Jesus","p":"Avante"},{"n":70057,"name":"Emilia Souza","p":"Avante"},{"n":70040,"name":"Erika Coelho","p":"Avante"},{"n":70001,"name":"Fabio Costa","p":"Avante"},{"n":70113,"name":"Flaviano Coelho","p":"Avante"},{"n":70099,"name":"Flavio Freitas","p":"Avante"},{"n":70333,"name":"Gil Torres","p":"Avante"},{"n":70732,"name":"Giovanna Oliveirà","p":"Avante"},{"n":70222,"name":"Helcio Angelo","p":"Avante"},{"n":70270,"name":"Iandra Tempestade","p":"Avante"},{"n":70000,"name":"Iranildo Campos","p":"Avante"},{"n":70722,"name":"Jeanine Presente","p":"Avante"},{"n":70775,"name":"Jose Carlos de Sousa","p":"Avante"},{"n":70300,"name":"João Soares","p":"Avante"},{"n":70773,"name":"Júlio Bonfadini","p":"Avante"},{"n":70471,"name":"Malva","p":"Avante"},{"n":70999,"name":"Marcelo Abrahao","p":"Avante"},{"n":70788,"name":"Marcio Diretor","p":"Avante"},{"n":70044,"name":"Mestre Marcia","p":"Avante"},{"n":70707,"name":"Nisomar Provenzano","p":"Avante"},{"n":70030,"name":"Pastor Samuel Gonzaga","p":"Avante"},{"n":70769,"name":"Pastora Glorinha Santos","p":"Avante"},{"n":70789,"name":"Patrick Guimarães","p":"Avante"},{"n":70888,"name":"Patrícia Nunes","p":"Avante"},{"n":70023,"name":"Paulo Ferreira","p":"Avante"},{"n":70022,"name":"Pedro Neto","p":"Avante"},{"n":70129,"name":"Perita Judicial Loriene","p":"Avante"},{"n":70012,"name":"Porteiro Joacir","p":"Avante"},{"n":70021,"name":"Pr. Emerson Pessanha","p":"Avante"},{"n":70009,"name":"Preta Martins","p":"Avante"},{"n":70177,"name":"Prof. Milton J.r.","p":"Avante"},{"n":70700,"name":"Professor Rogério Martins","p":"Avante"},{"n":70007,"name":"Quezia Souza","p":"Avante"},{"n":70101,"name":"Rachel Nasser","p":"Avante"},{"n":70212,"name":"Rodrigo Valentim","p":"Avante"},{"n":70444,"name":"Rogerio Pinheiro","p":"Avante"},{"n":70358,"name":"Rose Cabral","p":"Avante"},{"n":70221,"name":"Sandra Salomão","p":"Avante"},{"n":70078,"name":"Sandro da Saude","p":"Avante"},{"n":70762,"name":"Sgt da Silva","p":"Avante"},{"n":70431,"name":"Silvio Castro","p":"Avante"},{"n":70567,"name":"Tio Edinho","p":"Avante"},{"n":70972,"name":"Valentina Bm","p":"Avante"},{"n":70770,"name":"Viviany Pereira","p":"Avante"},{"n":70606,"name":"Wallace Canelinha","p":"Avante"}]},{"id":"dc","name":"DC","short":"DC","parties":[{"num":27,"sigla":"DC"}],"candidates":[{"n":27001,"name":"Ademir Martins","p":"DC"},{"n":27049,"name":"Ademir Rodrigues","p":"DC"},{"n":27223,"name":"Alcimar Borges","p":"DC"},{"n":27004,"name":"Alexandre Coutinho","p":"DC"},{"n":27260,"name":"Ana Paula Reis Preta de Fé","p":"DC"},{"n":27300,"name":"Ana da Saude","p":"DC"},{"n":27125,"name":"Anderson Bigu","p":"DC"},{"n":27010,"name":"Anderson Graniço","p":"DC"},{"n":27007,"name":"Anderson Kybba","p":"DC"},{"n":27888,"name":"Araribóia","p":"DC"},{"n":27277,"name":"Augusto Emilio","p":"DC"},{"n":27362,"name":"B1 Torres","p":"DC"},{"n":27079,"name":"Barbudo da Z.o","p":"DC"},{"n":27770,"name":"Bianca Neto","p":"DC"},{"n":27555,"name":"Bil Kele Bk","p":"DC"},{"n":27000,"name":"Bimbim Portella","p":"DC"},{"n":27077,"name":"Bispa Rosilene Olimpio","p":"DC"},{"n":27014,"name":"Carlinhos Pró Menor","p":"DC"},{"n":27700,"name":"Carlos Adriano","p":"DC"},{"n":27777,"name":"Carlos Russo","p":"DC"},{"n":27008,"name":"Carolina Peris","p":"DC"},{"n":27150,"name":"Chiquinho Trindade","p":"DC"},{"n":27332,"name":"Chiquinho do Gebara","p":"DC"},{"n":27003,"name":"Cica Som","p":"DC"},{"n":27444,"name":"Claudia Ferreira","p":"DC"},{"n":27134,"name":"Claudinha","p":"DC"},{"n":27200,"name":"Conrado","p":"DC"},{"n":27199,"name":"Cristiano Nogueira","p":"DC"},{"n":27177,"name":"Dhema Cantor","p":"DC"},{"n":27222,"name":"Dr. Acyr Aguiar","p":"DC"},{"n":27021,"name":"Dr. Ali","p":"DC"},{"n":27456,"name":"Dudu","p":"DC"},{"n":27327,"name":"Edilma da Quentinha","p":"DC"},{"n":27713,"name":"Enfermeira Bernardete Lima","p":"DC"},{"n":27227,"name":"Engenheiro Machado","p":"DC"},{"n":27369,"name":"Erika Mãezona","p":"DC"},{"n":27005,"name":"Eugenia Bondim","p":"DC"},{"n":27022,"name":"Fernando Alex","p":"DC"},{"n":27155,"name":"Gloria Calixto","p":"DC"},{"n":27088,"name":"Ivana Farmacêutica","p":"DC"},{"n":27027,"name":"Jackson Souza","p":"DC"},{"n":27750,"name":"Janaina da Cidade dos Idosos","p":"DC"},{"n":27333,"name":"Jane de Andrade","p":"DC"},{"n":27788,"name":"Joao Sotz","p":"DC"},{"n":27100,"name":"Jorge Coutinho","p":"DC"},{"n":27678,"name":"Josué de Oliveira","p":"DC"},{"n":27133,"name":"Kako","p":"DC"},{"n":27101,"name":"Karla Barreto","p":"DC"},{"n":27933,"name":"Lucio Lunny O Grandão","p":"DC"},{"n":27171,"name":"Marquinho Bombeiro","p":"DC"},{"n":27123,"name":"Marquinho do Transporte","p":"DC"},{"n":27144,"name":"Mauro do Bra","p":"DC"},{"n":27707,"name":"Mestre Bruce Lucio Paz","p":"DC"},{"n":27377,"name":"Ney Tudo Azul","p":"DC"},{"n":27789,"name":"Paloma Brasil","p":"DC"},{"n":27057,"name":"Pastor Taquaraci Rodrigues","p":"DC"},{"n":27017,"name":"Pelé Barbeiro","p":"DC"},{"n":27011,"name":"Professor Calvinho","p":"DC"},{"n":27137,"name":"Professor Nilton Patricio","p":"DC"},{"n":27075,"name":"Renato Santos","p":"DC"},{"n":27111,"name":"Rodrigo Rocha da Silva","p":"DC"},{"n":27762,"name":"Sargento Carvalhão","p":"DC"},{"n":27345,"name":"Simone Feitosa","p":"DC"},{"n":27999,"name":"Sub Honório","p":"DC"},{"n":27920,"name":"Sérgio Louback","p":"DC"},{"n":27072,"name":"Sérgio Penudjo","p":"DC"},{"n":27002,"name":"Tia Socorro","p":"DC"},{"n":27023,"name":"Valeria Nascimento","p":"DC"},{"n":27006,"name":"Vania do Alemão","p":"DC"},{"n":27677,"name":"Vitor Barbosa","p":"DC"}]},{"id":"democrata","name":"Democrata","short":"Democrata","parties":[{"num":35,"sigla":"Democrata"}],"candidates":[{"n":35033,"name":"Alexandre Ferrão","p":"Democrata"},{"n":35092,"name":"Andrea Horne","p":"Democrata"},{"n":35533,"name":"Angela Simoes","p":"Democrata"},{"n":35541,"name":"Angelina Gonzaga","p":"Democrata"},{"n":35088,"name":"Ari da Copa","p":"Democrata"},{"n":35999,"name":"Baiano Audacia Pura","p":"Democrata"},{"n":35030,"name":"Barbara Maia","p":"Democrata"},{"n":35100,"name":"Benjamin Bereco da Saúde","p":"Democrata"},{"n":35070,"name":"Bruno Ryu","p":"Democrata"},{"n":35031,"name":"Capitão Nascimento","p":"Democrata"},{"n":35455,"name":"Celso da Roça","p":"Democrata"},{"n":35025,"name":"Cesar Vigilante","p":"Democrata"},{"n":35020,"name":"Comissario Ivan Baptista","p":"Democrata"},{"n":35457,"name":"Daiana Silva","p":"Democrata"},{"n":35003,"name":"Dany Van Tol","p":"Democrata"},{"n":35935,"name":"Daril Nogueira","p":"Democrata"},{"n":35762,"name":"Dinho Gomes Pqd","p":"Democrata"},{"n":35123,"name":"Disraeli Ulrich","p":"Democrata"},{"n":35081,"name":"Drª. Elione","p":"Democrata"},{"n":35060,"name":"Drº Paulo Marcelo","p":"Democrata"},{"n":35897,"name":"Drº Ricardo","p":"Democrata"},{"n":35493,"name":"Ed. Velôzo","p":"Democrata"},{"n":35685,"name":"Eliane Silva","p":"Democrata"},{"n":35044,"name":"Enf. Fernanda","p":"Democrata"},{"n":35034,"name":"Enfermeira Flor","p":"Democrata"},{"n":35035,"name":"Evandro Lourenço O Gente Nossa","p":"Democrata"},{"n":35656,"name":"Francisco Araujo O Tica","p":"Democrata"},{"n":35222,"name":"Gersão","p":"Democrata"},{"n":35777,"name":"Gil Negão","p":"Democrata"},{"n":35221,"name":"Glauciane Martins","p":"Democrata"},{"n":35004,"name":"Hélio Cunha","p":"Democrata"},{"n":35775,"name":"Israel Atleta","p":"Democrata"},{"n":35121,"name":"Joelson do Ônibus","p":"Democrata"},{"n":35771,"name":"Josimar Mesquita","p":"Democrata"},{"n":35200,"name":"Kalico Mototaxi","p":"Democrata"},{"n":35779,"name":"Karen Tina","p":"Democrata"},{"n":35002,"name":"Karlos Batista","p":"Democrata"},{"n":35377,"name":"Leila da Saude","p":"Democrata"},{"n":35888,"name":"Lú Pontes","p":"Democrata"},{"n":35120,"name":"Marcelo Araújo","p":"Democrata"},{"n":35526,"name":"Marcelo Barril","p":"Democrata"},{"n":35353,"name":"Marcos Ximenes","p":"Democrata"},{"n":35015,"name":"Marlucia Cruz","p":"Democrata"},{"n":35633,"name":"Mister do Seu Braz","p":"Democrata"},{"n":35224,"name":"Mizinho","p":"Democrata"},{"n":35024,"name":"Moises Damasio","p":"Democrata"},{"n":35050,"name":"Nando Pais","p":"Democrata"},{"n":35223,"name":"Noemi Oliveira","p":"Democrata"},{"n":35800,"name":"Pastor Sebastião Andrade","p":"Democrata"},{"n":35110,"name":"Patricia Tavares","p":"Democrata"},{"n":35422,"name":"Paulo Silva","p":"Democrata"},{"n":35789,"name":"Roberto Motoboy","p":"Democrata"},{"n":35115,"name":"Rodrigo David","p":"Democrata"},{"n":35456,"name":"Ronaldo Batista Raiz","p":"Democrata"},{"n":35045,"name":"Roseli Silva","p":"Democrata"},{"n":35235,"name":"Saul Gualberto","p":"Democrata"},{"n":35000,"name":"Silas Chaves","p":"Democrata"},{"n":35555,"name":"Sub Oliveira","p":"Democrata"},{"n":35400,"name":"Thiago Silva","p":"Democrata"},{"n":35007,"name":"Veterano Humberto","p":"Democrata"},{"n":35001,"name":"Walter Torres","p":"Democrata"},{"n":35010,"name":"Wander Silva","p":"Democrata"},{"n":35700,"name":"Érica Ferreira","p":"Democrata"}]},{"id":"febr","name":"Federação Brasil da Esperança","short":"FE Brasil (PT/PCdoB/PV)","parties":[{"num":13,"sigla":"PT"},{"num":43,"sigla":"PV"},{"num":65,"sigla":"PCdoB"}],"candidates":[{"n":13620,"name":"Adilson Pires","p":"PT"},{"n":13650,"name":"Allyson Elias","p":"PT"},{"n":13567,"name":"André Ceciliano","p":"PT"},{"n":43937,"name":"André Tavares","p":"PV"},{"n":13513,"name":"Berriel","p":"PT"},{"n":13555,"name":"Brunnão Realleza","p":"PT"},{"n":43400,"name":"Bruno Vaca","p":"PV"},{"n":13333,"name":"Carol Ontiveros","p":"PT"},{"n":43000,"name":"César","p":"PV"},{"n":65123,"name":"Dani Balbi","p":"PCdoB"},{"n":13002,"name":"Devaldo","p":"PT"},{"n":13167,"name":"Durval Peçanha","p":"PT"},{"n":13813,"name":"Edna Calheiros Mandatocoletivo","p":"PT"},{"n":13611,"name":"Eduardo Acosta","p":"PT"},{"n":13021,"name":"Elika Takimoto","p":"PT"},{"n":13150,"name":"Erivaldo Filho","p":"PT"},{"n":13706,"name":"Fabio Doutor Fosforo","p":"PT"},{"n":43334,"name":"Felipe Alves","p":"PV"},{"n":13677,"name":"Graça do Pt","p":"PT"},{"n":13006,"name":"Hilder Ligeirinho","p":"PT"},{"n":13123,"name":"Igo Menezes","p":"PT"},{"n":13169,"name":"Indianarae Siqueira","p":"PT"},{"n":65131,"name":"Isaac Ricalde","p":"PCdoB"},{"n":13157,"name":"Jorge Braga","p":"PT"},{"n":13113,"name":"João Panayotis Damatis","p":"PT"},{"n":13131,"name":"Katia Macillo","p":"PT"},{"n":13013,"name":"Leonel de Esquerda","p":"PT"},{"n":65656,"name":"Lilian Behring","p":"PCdoB"},{"n":13040,"name":"Léo França","p":"PT"},{"n":43456,"name":"Maicon Cruz","p":"PV"},{"n":13777,"name":"Mallu Côrtes","p":"PT"},{"n":13433,"name":"Marco Aurélio Barreto","p":"PT"},{"n":13713,"name":"Marina do Mst","p":"PT"},{"n":13888,"name":"Mary Borges","p":"PT"},{"n":13320,"name":"Missionário Thiago","p":"PT"},{"n":65021,"name":"Márcio Filho","p":"PCdoB"},{"n":13008,"name":"Neusa Guarani","p":"PT"},{"n":13913,"name":"Ney Soares","p":"PT"},{"n":43621,"name":"Paulinha Silva","p":"PV"},{"n":13613,"name":"Paulo Mustrangi","p":"PT"},{"n":13967,"name":"Pr. Hudson M","p":"PT"},{"n":13001,"name":"Professor Waldeck Carneiro","p":"PT"},{"n":43333,"name":"Professora Tânia Mara","p":"PV"},{"n":13321,"name":"Raimundo Nonato","p":"PT"},{"n":13000,"name":"Raone Ferreira","p":"PT"},{"n":13444,"name":"Renato Machado","p":"PT"},{"n":13616,"name":"Ricardo Santos","p":"PT"},{"n":13007,"name":"Rose Cipriano","p":"PT"},{"n":43177,"name":"Sandra do Mutirão","p":"PV"},{"n":13400,"name":"Thaysa Ventura","p":"PT"},{"n":13456,"name":"Tuninho da Padaria","p":"PT"},{"n":13580,"name":"Verônica Lima","p":"PT"},{"n":13134,"name":"Vinicios Betiol","p":"PT"},{"n":43111,"name":"Wallace O Abençoado","p":"PV"},{"n":13681,"name":"William Macedo","p":"PT"},{"n":13103,"name":"Zeidan","p":"PT"},{"n":13193,"name":"Zé Alexandre","p":"PT"}]},{"id":"mdb","name":"MDB","short":"MDB","parties":[{"num":15,"sigla":"MDB"}],"candidates":[{"n":15116,"name":"Alberto França","p":"MDB"},{"n":15099,"name":"Alberto Nóbrega","p":"MDB"},{"n":15615,"name":"Andinho Dj","p":"MDB"},{"n":15022,"name":"Apóstola Marina Aguiar","p":"MDB"},{"n":15144,"name":"Augusto Pereira","p":"MDB"},{"n":15132,"name":"Bispa Neuly Barros","p":"MDB"},{"n":15025,"name":"Carla M Moraes","p":"MDB"},{"n":15069,"name":"Carlos Alexandre","p":"MDB"},{"n":15009,"name":"Celia Menezes","p":"MDB"},{"n":15555,"name":"Delegado Marcus Vinicius","p":"MDB"},{"n":15021,"name":"Dr. Leonardo Mazzutti","p":"MDB"},{"n":15888,"name":"Dr.rodrigo Schröder","p":"MDB"},{"n":15026,"name":"Débora Magalhães","p":"MDB"},{"n":15088,"name":"Edson Albertassi","p":"MDB"},{"n":15280,"name":"Edson Charly","p":"MDB"},{"n":15612,"name":"Eliane Mendes","p":"MDB"},{"n":15881,"name":"Fabiano Orelha","p":"MDB"},{"n":15041,"name":"Fernando Santa Cruz","p":"MDB"},{"n":15800,"name":"Francisco Floriano","p":"MDB"},{"n":15222,"name":"Fred Procópio","p":"MDB"},{"n":15779,"name":"Gian Marins","p":"MDB"},{"n":15000,"name":"Giovani Ratinho","p":"MDB"},{"n":15444,"name":"Gisele do Tiquinho","p":"MDB"},{"n":15931,"name":"Inacio Geraldo","p":"MDB"},{"n":15677,"name":"Jerri Miranda","p":"MDB"},{"n":15548,"name":"Jonathan Jj","p":"MDB"},{"n":15251,"name":"Juvenato","p":"MDB"},{"n":15115,"name":"Karla de Lucas da Rádio","p":"MDB"},{"n":15018,"name":"Kleber da Academia","p":"MDB"},{"n":15005,"name":"Luciana Orozimbo","p":"MDB"},{"n":15666,"name":"Marcos José","p":"MDB"},{"n":15020,"name":"Marina Carvalho","p":"MDB"},{"n":15768,"name":"Mario Sodré de Nova Iguacu","p":"MDB"},{"n":15123,"name":"Marquinho Mendes","p":"MDB"},{"n":15339,"name":"Mayara Flor","p":"MDB"},{"n":15616,"name":"Mell Tamiozzo","p":"MDB"},{"n":15789,"name":"Nando da Nancel","p":"MDB"},{"n":15159,"name":"Pablo Siqueira","p":"MDB"},{"n":15117,"name":"Pastor Edson Camara","p":"MDB"},{"n":15613,"name":"Pastora Aldineia","p":"MDB"},{"n":15002,"name":"Patrícia Regina","p":"MDB"},{"n":15345,"name":"Paulo Ramos","p":"MDB"},{"n":15180,"name":"Pedagoga Gama","p":"MDB"},{"n":15003,"name":"Professora Cristiane Marcelino","p":"MDB"},{"n":15500,"name":"Renato Moura","p":"MDB"},{"n":15231,"name":"Robson Tadeu","p":"MDB"},{"n":15233,"name":"Rosangela Lima","p":"MDB"},{"n":15016,"name":"Rosenverg Reis","p":"MDB"},{"n":15242,"name":"Teixeira do Carvão","p":"MDB"},{"n":15220,"name":"Thaiza Cristina","p":"MDB"},{"n":15006,"name":"Tia Sonia","p":"MDB"},{"n":15015,"name":"Toni Russo","p":"MDB"},{"n":15777,"name":"Yenna","p":"MDB"}]},{"id":"missao","name":"Missão","short":"Missão","parties":[{"num":14,"sigla":"Missão"}],"candidates":[{"n":14444,"name":"André Brandão","p":"Missão"},{"n":14222,"name":"Jaqueline Vieira","p":"Missão"},{"n":14000,"name":"Pedro Badaró","p":"Missão"},{"n":14762,"name":"Prof Davi Andrade","p":"Missão"},{"n":14192,"name":"Rui Saldanha","p":"Missão"},{"n":14014,"name":"Silvia Quezado","p":"Missão"}]},{"id":"mobiliza","name":"Mobiliza","short":"Mobiliza","parties":[{"num":33,"sigla":"Mobiliza"}],"candidates":[{"n":33789,"name":"Alanzinho da Saude","p":"Mobiliza"},{"n":33324,"name":"Alex Servo","p":"Mobiliza"},{"n":33018,"name":"Amanda Diniz","p":"Mobiliza"},{"n":33633,"name":"Ananias Bernardo","p":"Mobiliza"},{"n":33036,"name":"Andre Balbina Gari Ativista","p":"Mobiliza"},{"n":33027,"name":"Andre do Flamengo","p":"Mobiliza"},{"n":33425,"name":"Ashiley Xavier","p":"Mobiliza"},{"n":33100,"name":"Benedito Cara Nova","p":"Mobiliza"},{"n":33003,"name":"Carlinhos Cunha","p":"Mobiliza"},{"n":33023,"name":"Carlos Vampeta","p":"Mobiliza"},{"n":33000,"name":"Carol do Taxi","p":"Mobiliza"},{"n":33366,"name":"Ceiça Pereira","p":"Mobiliza"},{"n":33700,"name":"Cris Goulart","p":"Mobiliza"},{"n":33063,"name":"Dalmo Jorge Educador","p":"Mobiliza"},{"n":33333,"name":"Diego Marques","p":"Mobiliza"},{"n":33107,"name":"Diogo Nascimento","p":"Mobiliza"},{"n":33111,"name":"Dr. Fabiano Rozembrach","p":"Mobiliza"},{"n":33500,"name":"Dr. João Baptista","p":"Mobiliza"},{"n":33888,"name":"Dr. Leonardo Aragão","p":"Mobiliza"},{"n":33123,"name":"Dr. Renato de Paula","p":"Mobiliza"},{"n":33755,"name":"Dra. Janaina Trintin","p":"Mobiliza"},{"n":33322,"name":"Elna Müller","p":"Mobiliza"},{"n":33778,"name":"Fabio Chaves","p":"Mobiliza"},{"n":33666,"name":"Felipe Sommer","p":"Mobiliza"},{"n":33053,"name":"Genilson Guimarães","p":"Mobiliza"},{"n":33444,"name":"Guilherme Menezes","p":"Mobiliza"},{"n":33456,"name":"Gutembergue de Oliveira","p":"Mobiliza"},{"n":33004,"name":"Isis Viana","p":"Mobiliza"},{"n":33976,"name":"Jacqueline Poeys","p":"Mobiliza"},{"n":33033,"name":"Jair Ramos","p":"Mobiliza"},{"n":33323,"name":"Jairo Meira","p":"Mobiliza"},{"n":33050,"name":"Joel Machado","p":"Mobiliza"},{"n":33376,"name":"Jorge Almeida","p":"Mobiliza"},{"n":33369,"name":"Josi Ribeiro","p":"Mobiliza"},{"n":33623,"name":"Jovino de Paula","p":"Mobiliza"},{"n":33060,"name":"Joyce Andressa","p":"Mobiliza"},{"n":33657,"name":"João Carlos Jc. Comunidade","p":"Mobiliza"},{"n":33389,"name":"Jvillar","p":"Mobiliza"},{"n":33468,"name":"Jô Benedicto","p":"Mobiliza"},{"n":33393,"name":"Leandro Gomes","p":"Mobiliza"},{"n":33580,"name":"Leandro Goulart","p":"Mobiliza"},{"n":33137,"name":"Leandro de Paula","p":"Mobiliza"},{"n":33200,"name":"Leandro dos Santos","p":"Mobiliza"},{"n":33007,"name":"Leonardo da Vinci","p":"Mobiliza"},{"n":33350,"name":"Luis Filho","p":"Mobiliza"},{"n":33020,"name":"Mara da Zona Oeste","p":"Mobiliza"},{"n":33878,"name":"Marcelo Fernandes","p":"Mobiliza"},{"n":33321,"name":"Marcio Cardoso","p":"Mobiliza"},{"n":33222,"name":"Marcos Força Brasil","p":"Mobiliza"},{"n":33228,"name":"Maria Carmem","p":"Mobiliza"},{"n":33862,"name":"Nilton Lopes Silva Ôgari","p":"Mobiliza"},{"n":33039,"name":"Olegario","p":"Mobiliza"},{"n":33101,"name":"Orlando Russo da Panela","p":"Mobiliza"},{"n":33638,"name":"Paulo Fernando","p":"Mobiliza"},{"n":33190,"name":"Paulo Sobral","p":"Mobiliza"},{"n":33192,"name":"Prof. Antonio Barreto","p":"Mobiliza"},{"n":33021,"name":"Prof. Evelyn","p":"Mobiliza"},{"n":33555,"name":"Professor Jose Onix","p":"Mobiliza"},{"n":33177,"name":"Rafael Simplicio","p":"Mobiliza"},{"n":33777,"name":"Rafaela Cerruti","p":"Mobiliza"},{"n":33233,"name":"Raphael Gonçalves","p":"Mobiliza"},{"n":33227,"name":"Regina Fonte","p":"Mobiliza"},{"n":33360,"name":"Rosangela Leal","p":"Mobiliza"},{"n":33430,"name":"Rosangela Silva","p":"Mobiliza"},{"n":33195,"name":"Sergio Oliveira","p":"Mobiliza"},{"n":33008,"name":"Sheila Conceição","p":"Mobiliza"},{"n":33155,"name":"Sussu de Búzios","p":"Mobiliza"},{"n":33345,"name":"Tuquinha","p":"Mobiliza"}]},{"id":"novo","name":"Novo","short":"Novo","parties":[{"num":30,"sigla":"Novo"}],"candidates":[{"n":30121,"name":"Adair Vieira","p":"Novo"},{"n":30077,"name":"Alba Monteiro","p":"Novo"},{"n":30230,"name":"Alberto Habib","p":"Novo"},{"n":30999,"name":"Alessandra Esequiel","p":"Novo"},{"n":30577,"name":"Alessandra Teixeira","p":"Novo"},{"n":30120,"name":"Alex Farah","p":"Novo"},{"n":30005,"name":"Alexandre Abelha","p":"Novo"},{"n":30636,"name":"Alexandre Aguiar","p":"Novo"},{"n":30007,"name":"Alexandre Freitas","p":"Novo"},{"n":30047,"name":"Alexandre Marciano","p":"Novo"},{"n":30177,"name":"Ana Luísa","p":"Novo"},{"n":30222,"name":"Ana Paula Goldbach","p":"Novo"},{"n":30500,"name":"Arnaldo Baltazar","p":"Novo"},{"n":30193,"name":"Bomba","p":"Novo"},{"n":30311,"name":"Bruno Guerra","p":"Novo"},{"n":30276,"name":"Carlos Cabral","p":"Novo"},{"n":30555,"name":"Cassius Vieira","p":"Novo"},{"n":30330,"name":"Christine Moutinho","p":"Novo"},{"n":30777,"name":"Claudia Bello","p":"Novo"},{"n":30003,"name":"Cláudia Bodart","p":"Novo"},{"n":30038,"name":"Coronel Germano","p":"Novo"},{"n":30030,"name":"Coronel Leocir Dal Pai","p":"Novo"},{"n":30333,"name":"Costenaro","p":"Novo"},{"n":30200,"name":"Cremildo Vigilante","p":"Novo"},{"n":30307,"name":"Dayan Voltri7","p":"Novo"},{"n":30190,"name":"Diego Moreno","p":"Novo"},{"n":30006,"name":"Dr Ricardo Bitencourt","p":"Novo"},{"n":30900,"name":"Dr Vlamir Goulart","p":"Novo"},{"n":30101,"name":"Dr. Roberto Azevedo","p":"Novo"},{"n":30011,"name":"Dra Thaís Muquici","p":"Novo"},{"n":30001,"name":"Débora Pontes","p":"Novo"},{"n":30055,"name":"Elaine Constantino","p":"Novo"},{"n":30054,"name":"Enfermeira Ercilene Araújo","p":"Novo"},{"n":30707,"name":"Erick Cruz","p":"Novo"},{"n":30111,"name":"Fabiana Recreart","p":"Novo"},{"n":30009,"name":"Fabiane Rodrigues","p":"Novo"},{"n":30313,"name":"Fernando Bicudo","p":"Novo"},{"n":30303,"name":"Fernando Braz","p":"Novo"},{"n":30100,"name":"Ferreira","p":"Novo"},{"n":30130,"name":"Genilson Barros","p":"Novo"},{"n":30789,"name":"Gilberto Esteves","p":"Novo"},{"n":30002,"name":"Gustavo Busse","p":"Novo"},{"n":30021,"name":"Helinho Estadual","p":"Novo"},{"n":30430,"name":"Igor Barros","p":"Novo"},{"n":30004,"name":"Janinho Autoescola","p":"Novo"},{"n":30455,"name":"Liliane Lourenço","p":"Novo"},{"n":30026,"name":"Luana Gouvêa","p":"Novo"},{"n":30930,"name":"Marcelo Sub do Judô","p":"Novo"},{"n":30800,"name":"Marcio Motta","p":"Novo"},{"n":30033,"name":"Mario Jesus","p":"Novo"},{"n":30444,"name":"Marquinho","p":"Novo"},{"n":30722,"name":"Nicole Oliver","p":"Novo"},{"n":30191,"name":"Okasaki","p":"Novo"},{"n":30107,"name":"Professora Leticia de Sá","p":"Novo"},{"n":30756,"name":"Raul Corretor","p":"Novo"},{"n":30233,"name":"Renata Claudino","p":"Novo"},{"n":30600,"name":"Renato da Remmar","p":"Novo"},{"n":30147,"name":"Rogério Santos","p":"Novo"},{"n":30099,"name":"Romildo Victorino","p":"Novo"},{"n":30700,"name":"Roseli Ferreira","p":"Novo"},{"n":30211,"name":"Rui Lima","p":"Novo"},{"n":30321,"name":"Sgt Lúcio Duarte","p":"Novo"},{"n":30221,"name":"Shirley Moraes","p":"Novo"},{"n":30123,"name":"Silvia Brolo","p":"Novo"},{"n":30400,"name":"Simone Soares","p":"Novo"},{"n":30622,"name":"Sylvio Lucas Morffeu","p":"Novo"},{"n":30023,"name":"Vini Vitorino","p":"Novo"},{"n":30010,"name":"Welber Assis","p":"Novo"},{"n":30300,"name":"Welbert Pedro","p":"Novo"},{"n":30000,"name":"Yara Haquim","p":"Novo"}]},{"id":"pco","name":"PCO","short":"PCO","parties":[{"num":29,"sigla":"PCO"}],"candidates":[{"n":29029,"name":"Pedro Diniz","p":"PCO"},{"n":29129,"name":"Solange Pereira","p":"PCO"}]},{"id":"pdt","name":"PDT","short":"PDT","parties":[{"num":12,"sigla":"PDT"}],"candidates":[{"n":12514,"name":"Abiguar","p":"PDT"},{"n":12033,"name":"Alcyr Barão","p":"PDT"},{"n":12111,"name":"Alexandre do Porto","p":"PDT"},{"n":12182,"name":"Alina Vieira","p":"PDT"},{"n":12200,"name":"Anderson da Saude","p":"PDT"},{"n":12423,"name":"Andrea Ribeiro","p":"PDT"},{"n":12177,"name":"Angelica Moreira","p":"PDT"},{"n":12179,"name":"Anna Cristina Pinheiro","p":"PDT"},{"n":12678,"name":"Badi","p":"PDT"},{"n":12999,"name":"Betão Pezão","p":"PDT"},{"n":12007,"name":"Branca Santos","p":"PDT"},{"n":12013,"name":"Claudio Cezar","p":"PDT"},{"n":12312,"name":"Clovinho Sempre Junto","p":"PDT"},{"n":12789,"name":"Dr Rafael Brasiel","p":"PDT"},{"n":12022,"name":"Dr. Mauricio","p":"PDT"},{"n":12346,"name":"Edson Ribeiro Pitimbu","p":"PDT"},{"n":12003,"name":"Elaine Oliveira","p":"PDT"},{"n":12005,"name":"Elker Jaé","p":"PDT"},{"n":12311,"name":"Fabi Carmo","p":"PDT"},{"n":12099,"name":"Fabio Feijó","p":"PDT"},{"n":12666,"name":"Felipe Sangineto","p":"PDT"},{"n":12000,"name":"Fernanda Neves","p":"PDT"},{"n":12612,"name":"Gilsinho Amigo","p":"PDT"},{"n":12620,"name":"Helanio de Resende","p":"PDT"},{"n":12190,"name":"Helô Cordeiro","p":"PDT"},{"n":12129,"name":"Hernandes Jogador","p":"PDT"},{"n":12137,"name":"India","p":"PDT"},{"n":12026,"name":"Jaime Aroxa","p":"PDT"},{"n":12777,"name":"Jocimar Freire","p":"PDT"},{"n":12712,"name":"Jorge Katarina","p":"PDT"},{"n":12025,"name":"Josias Moreira O Homem do Povo","p":"PDT"},{"n":12230,"name":"João Brother","p":"PDT"},{"n":12222,"name":"Junior Uios","p":"PDT"},{"n":12555,"name":"Lacerda","p":"PDT"},{"n":12345,"name":"Leo Lupi","p":"PDT"},{"n":12147,"name":"Luiz Alexandre","p":"PDT"},{"n":12030,"name":"Luizinho Evangelista","p":"PDT"},{"n":12001,"name":"Léo Magalhães","p":"PDT"},{"n":12012,"name":"Marcell Castro de Barra Mansa","p":"PDT"},{"n":12236,"name":"Marilene dos Santos","p":"PDT"},{"n":12733,"name":"Mariza Fernandes Costureira","p":"PDT"},{"n":12077,"name":"Mãe Odélewá","p":"PDT"},{"n":12333,"name":"Naldo da Saude","p":"PDT"},{"n":12888,"name":"Patricia Azedo","p":"PDT"},{"n":12456,"name":"Pedro Henrique","p":"PDT"},{"n":12024,"name":"Phênix","p":"PDT"},{"n":12544,"name":"Professor Edson Paiva","p":"PDT"},{"n":12500,"name":"Professor Marcão","p":"PDT"},{"n":12122,"name":"Professora Maria Helena","p":"PDT"},{"n":12322,"name":"Roberta Bombom","p":"PDT"},{"n":12120,"name":"Rodrigo da Aposentadoria","p":"PDT"},{"n":12123,"name":"Serginho","p":"PDT"},{"n":12088,"name":"Sonia Aparecida","p":"PDT"},{"n":12044,"name":"Sonia Gaspar","p":"PDT"},{"n":12180,"name":"Susy","p":"PDT"},{"n":12645,"name":"Valdecy Nunes","p":"PDT"},{"n":12010,"name":"Vivi Rodrigues","p":"PDT"},{"n":12900,"name":"Vizeu","p":"PDT"},{"n":12600,"name":"Vlad Bigode","p":"PDT"},{"n":12444,"name":"William Barcellos","p":"PDT"},{"n":12369,"name":"Ze Vieira","p":"PDT"},{"n":12543,"name":"Zito","p":"PDT"}]},{"id":"pl","name":"PL","short":"PL","parties":[{"num":22,"sigla":"PL"}],"candidates":[{"n":22377,"name":"Alan Lopes","p":"PL"},{"n":22789,"name":"Alexandra Moreira","p":"PL"},{"n":22077,"name":"Alexandre Isquierdo Malafaia","p":"PL"},{"n":22722,"name":"Alexandre Knoploch","p":"PL"},{"n":22522,"name":"Aline Muniz","p":"PL"},{"n":22120,"name":"Anderson Moraes","p":"PL"},{"n":22369,"name":"Bruno Boaretto","p":"PL"},{"n":22822,"name":"Bruno Lessa","p":"PL"},{"n":22220,"name":"Bruno Porto","p":"PL"},{"n":22888,"name":"Carol de Caxias","p":"PL"},{"n":22611,"name":"Chico Machado","p":"PL"},{"n":22311,"name":"Clemilda Cléo Mendonça","p":"PL"},{"n":22234,"name":"Comandante Felipe","p":"PL"},{"n":22922,"name":"Coronel Marcio","p":"PL"},{"n":22001,"name":"Coronel Menezes","p":"PL"},{"n":22002,"name":"Daniel Marques","p":"PL"},{"n":22045,"name":"Delegado Carlos Augusto","p":"PL"},{"n":22007,"name":"Donizete Pantera","p":"PL"},{"n":22456,"name":"Dr. Deodalto","p":"PL"},{"n":22000,"name":"Dr. Pedro Ricardo","p":"PL"},{"n":22123,"name":"Dr. Rogerio Amorim","p":"PL"},{"n":22400,"name":"Dra Helen Vita","p":"PL"},{"n":22122,"name":"Dra. Gabriela","p":"PL"},{"n":22555,"name":"Drª Grazi Macedo","p":"PL"},{"n":22424,"name":"Elisa Sorriso","p":"PL"},{"n":22200,"name":"Felipe Tropa","p":"PL"},{"n":22010,"name":"Fred Pacheco","p":"PL"},{"n":22500,"name":"Giselle Monteiro","p":"PL"},{"n":22777,"name":"Greg Duarte","p":"PL"},{"n":22222,"name":"Guilherme Delaroli","p":"PL"},{"n":22082,"name":"Hilary Rouse","p":"PL"},{"n":22300,"name":"Jair Bittencourt","p":"PL"},{"n":22021,"name":"Jeremais Santos","p":"PL"},{"n":22800,"name":"Jorge Felippe Neto","p":"PL"},{"n":22707,"name":"Lisandra Carlos","p":"PL"},{"n":22999,"name":"Luiz Junior","p":"PL"},{"n":22762,"name":"Major Elitusalem","p":"PL"},{"n":22190,"name":"Marcelo Dino","p":"PL"},{"n":22202,"name":"Maria José","p":"PL"},{"n":22014,"name":"Missionária Paulinha","p":"PL"},{"n":22567,"name":"Missionária Viviane Amorim","p":"PL"},{"n":22070,"name":"Márcio Gualberto","p":"PL"},{"n":22022,"name":"Nelsinho Ruas","p":"PL"},{"n":22223,"name":"Nilson O Abençoado","p":"PL"},{"n":22422,"name":"Octavio Sampaio","p":"PL"},{"n":22252,"name":"Paula Quintanilha","p":"PL"},{"n":22900,"name":"Policial Paulo Bastos","p":"PL"},{"n":22622,"name":"Poubel Filho","p":"PL"},{"n":22015,"name":"Pricarisma","p":"PL"},{"n":22580,"name":"Professor Heitor Queiroz","p":"PL"},{"n":22221,"name":"Ralph Gracie","p":"PL"},{"n":22111,"name":"Renan Jordy","p":"PL"},{"n":22288,"name":"Renata Manfrenate","p":"PL"},{"n":22345,"name":"Renato Miranda","p":"PL"},{"n":22100,"name":"Ricardo Pericar","p":"PL"},{"n":22700,"name":"Roberto Cid","p":"PL"},{"n":22444,"name":"Rodrigo Ascoly","p":"PL"},{"n":22133,"name":"Rodrigo Farias O Xuxa","p":"PL"},{"n":22333,"name":"Rodrigo Medeiros","p":"PL"},{"n":22321,"name":"Superzefa","p":"PL"},{"n":22615,"name":"Valdecy da Saúde","p":"PL"},{"n":22322,"name":"Índia Armelau","p":"PL"}]},{"id":"pode","name":"Podemos","short":"Podemos","parties":[{"num":20,"sigla":"Podemos"}],"candidates":[{"n":20067,"name":"Antonio Gonçalves","p":"Podemos"},{"n":20456,"name":"Bia Cruz","p":"Podemos"},{"n":20332,"name":"Cantor Marcos Silva","p":"Podemos"},{"n":20153,"name":"Cláudio Silva","p":"Podemos"},{"n":20880,"name":"Cristiane Rodrigues","p":"Podemos"},{"n":20555,"name":"David Nogueira","p":"Podemos"},{"n":20705,"name":"Davizinho do Podemos","p":"Podemos"},{"n":20123,"name":"Diney Marins","p":"Podemos"},{"n":20021,"name":"Dra. Regina Evaristo","p":"Podemos"},{"n":20500,"name":"Dyonne de Seropédica","p":"Podemos"},{"n":20228,"name":"Eduardo Rosa","p":"Podemos"},{"n":20088,"name":"Elaine Soares A Patroa","p":"Podemos"},{"n":20022,"name":"Hudson Ferreira","p":"Podemos"},{"n":20200,"name":"Hudson Tavares","p":"Podemos"},{"n":20257,"name":"Ingrid Barbosa","p":"Podemos"},{"n":20093,"name":"Jc Augusto Chapolim","p":"Podemos"},{"n":20688,"name":"Jorge Borges Gambá","p":"Podemos"},{"n":20622,"name":"Kamila Kisuco","p":"Podemos"},{"n":20027,"name":"Kelly Mattos","p":"Podemos"},{"n":20777,"name":"Leandro Lacerda","p":"Podemos"},{"n":20044,"name":"Luciano Agualuza","p":"Podemos"},{"n":20474,"name":"Marcos Moura","p":"Podemos"},{"n":20016,"name":"Marcus Gama","p":"Podemos"},{"n":20190,"name":"Marcão Valladão","p":"Podemos"},{"n":20111,"name":"Miraldo Corretor","p":"Podemos"},{"n":20444,"name":"Nilton Costa","p":"Podemos"},{"n":20030,"name":"Nonato Trinta","p":"Podemos"},{"n":20213,"name":"Nubia Flôres","p":"Podemos"},{"n":20362,"name":"Oséias Santos","p":"Podemos"},{"n":20620,"name":"Pastor Rafael Oliveira","p":"Podemos"},{"n":20120,"name":"Poggian","p":"Podemos"},{"n":20000,"name":"Professor Paulo Pereira","p":"Podemos"},{"n":20011,"name":"Professor Vieira","p":"Podemos"},{"n":20122,"name":"Professora Lívia Medeiros","p":"Podemos"},{"n":20321,"name":"Rafael Maestro","p":"Podemos"},{"n":20091,"name":"Raquel Cruz","p":"Podemos"},{"n":20707,"name":"Renan Lopes","p":"Podemos"},{"n":20183,"name":"Rosana Paulino","p":"Podemos"},{"n":20338,"name":"Saul Ribeiro","p":"Podemos"},{"n":20650,"name":"Silvio Guedes","p":"Podemos"},{"n":20007,"name":"Simone Contreiras","p":"Podemos"},{"n":20080,"name":"Tec. Ind. Sergio Ricardo","p":"Podemos"},{"n":20230,"name":"Tenente Otacilio Filho","p":"Podemos"},{"n":20124,"name":"Tia Tânia da Creche","p":"Podemos"},{"n":20008,"name":"Waguinho Esporte","p":"Podemos"}]},{"id":"rensol","name":"Federação Renovação Solidária","short":"PRD/Solidariedade","parties":[{"num":25,"sigla":"PRD"},{"num":77,"sigla":"Solidariedade"}],"candidates":[{"n":77251,"name":"Alex Magar","p":"Solidariedade"},{"n":77676,"name":"Alex da Confecção","p":"Solidariedade"},{"n":77888,"name":"Alexandre Batista","p":"Solidariedade"},{"n":25625,"name":"Alexandre Couto","p":"PRD"},{"n":25321,"name":"Aline Lopes","p":"PRD"},{"n":25023,"name":"Ana Paula Rodeio","p":"PRD"},{"n":77233,"name":"Ana Sagário","p":"Solidariedade"},{"n":77190,"name":"André Rios","p":"Solidariedade"},{"n":77222,"name":"Arthur Monteiro","p":"Solidariedade"},{"n":77778,"name":"Baba Rodrigo","p":"Solidariedade"},{"n":25333,"name":"Batata","p":"PRD"},{"n":77345,"name":"Bia Aquino","p":"Solidariedade"},{"n":25016,"name":"Bonito Reis","p":"PRD"},{"n":77119,"name":"Bruno Max","p":"Solidariedade"},{"n":77277,"name":"Camila Palermo","p":"Solidariedade"},{"n":77750,"name":"Cláudia Braga","p":"Solidariedade"},{"n":77191,"name":"Coronel Júnior","p":"Solidariedade"},{"n":25220,"name":"Cris da Sustentabilidade","p":"PRD"},{"n":77733,"name":"Dalielson Berto","p":"Solidariedade"},{"n":77383,"name":"Denis do Skate","p":"Solidariedade"},{"n":25000,"name":"Diogo Talento","p":"PRD"},{"n":77555,"name":"Dr. Norival Júnior","p":"Solidariedade"},{"n":77180,"name":"Elaine Martins","p":"Solidariedade"},{"n":25555,"name":"Flavia Thomaz","p":"PRD"},{"n":77077,"name":"Francimara Azeredo","p":"Solidariedade"},{"n":77677,"name":"Gisele Nascimento","p":"Solidariedade"},{"n":77433,"name":"Gudê","p":"Solidariedade"},{"n":77855,"name":"Jairo Bispo","p":"Solidariedade"},{"n":25123,"name":"Jorginho Brum","p":"PRD"},{"n":25777,"name":"João Drumond","p":"PRD"},{"n":77444,"name":"Junior Trakinas","p":"Solidariedade"},{"n":77026,"name":"Kátia Nascimento","p":"Solidariedade"},{"n":77788,"name":"Leandro Marques","p":"Solidariedade"},{"n":77321,"name":"Leliane Pinheiro","p":"Solidariedade"},{"n":77159,"name":"Leonardo Teco","p":"Solidariedade"},{"n":77122,"name":"Liliam Sá","p":"Solidariedade"},{"n":77501,"name":"Luciano Garcia","p":"Solidariedade"},{"n":25855,"name":"Lívia Oliveira","p":"PRD"},{"n":77231,"name":"Maestro João Lucas","p":"Solidariedade"},{"n":25193,"name":"Major Izabel","p":"PRD"},{"n":77770,"name":"Marcella Mello","p":"Solidariedade"},{"n":77333,"name":"Marco Antônio Cabral","p":"Solidariedade"},{"n":77033,"name":"Maria Inês","p":"Solidariedade"},{"n":77500,"name":"Marquinho da Creche","p":"Solidariedade"},{"n":25142,"name":"Marquinho do Frangão","p":"PRD"},{"n":77777,"name":"Munir Neto","p":"Solidariedade"},{"n":77533,"name":"Natasha Loba","p":"Solidariedade"},{"n":77241,"name":"Pastor Jonathan Ferreira","p":"Solidariedade"},{"n":77007,"name":"Pastora Glória Thiengo","p":"Solidariedade"},{"n":77037,"name":"Pastora Janaína Guimarães","p":"Solidariedade"},{"n":77776,"name":"Prof. Alexandre","p":"Solidariedade"},{"n":77200,"name":"Prof. Helbia Barreto","p":"Solidariedade"},{"n":77456,"name":"Prof. João Lucas","p":"Solidariedade"},{"n":77136,"name":"Prof. Renata Vieira","p":"Solidariedade"},{"n":25650,"name":"Pé Liso","p":"PRD"},{"n":77789,"name":"Renatinho","p":"Solidariedade"},{"n":77100,"name":"Renato Valverde","p":"Solidariedade"},{"n":77282,"name":"Robson Menezes","p":"Solidariedade"},{"n":77890,"name":"Rodrigo Drable","p":"Solidariedade"},{"n":77021,"name":"Rogério Predador","p":"Solidariedade"},{"n":25028,"name":"Sidney Dinho","p":"PRD"},{"n":77000,"name":"Simone do Quiosque","p":"Solidariedade"},{"n":77212,"name":"Solange Naval","p":"Solidariedade"},{"n":25190,"name":"Soldado Tobias","p":"PRD"},{"n":77051,"name":"Tunico Amigo do Povo","p":"Solidariedade"},{"n":25234,"name":"Vaguinho Neguinho","p":"PRD"},{"n":25888,"name":"Val Ceasa","p":"PRD"},{"n":77040,"name":"Verônica Andrade","p":"Solidariedade"},{"n":77044,"name":"Verônica do Social","p":"Solidariedade"},{"n":77101,"name":"Wellington Vizinho","p":"Solidariedade"},{"n":77133,"name":"Zezinho do Caminhão","p":"Solidariedade"}]},{"id":"psb","name":"PSB","short":"PSB","parties":[{"num":40,"sigla":"PSB"}],"candidates":[{"n":40822,"name":"Adriano Rodrigues","p":"PSB"},{"n":40135,"name":"Ailton Freitas","p":"PSB"},{"n":40222,"name":"Alan Mansur","p":"PSB"},{"n":40209,"name":"Alexxa","p":"PSB"},{"n":40001,"name":"André Salvador","p":"PSB"},{"n":40234,"name":"Assis Freitas","p":"PSB"},{"n":40852,"name":"Batatinha","p":"PSB"},{"n":40000,"name":"Carlos Minc","p":"PSB"},{"n":40630,"name":"Cesinha Com Todo Gás","p":"PSB"},{"n":40520,"name":"Christiane Rodrigues","p":"PSB"},{"n":40011,"name":"Claudia Respeita","p":"PSB"},{"n":40450,"name":"Deise Franklin","p":"PSB"},{"n":40637,"name":"Denise Vieira","p":"PSB"},{"n":40351,"name":"Dinny da Vila","p":"PSB"},{"n":40369,"name":"Dr Gilmar Santos","p":"PSB"},{"n":40007,"name":"Dr Gláucio Tai Chi","p":"PSB"},{"n":40153,"name":"Dr Haroldo Bunn","p":"PSB"},{"n":40040,"name":"Dr Sérgio","p":"PSB"},{"n":40123,"name":"Dr. Marcos Paulo","p":"PSB"},{"n":40567,"name":"Dra Mariana Moraes","p":"PSB"},{"n":40455,"name":"Eli da Refrigeração","p":"PSB"},{"n":40556,"name":"Erica da Saúde","p":"PSB"},{"n":40140,"name":"Evandro Brasil","p":"PSB"},{"n":40111,"name":"Ezaquiel Siqueira","p":"PSB"},{"n":40611,"name":"Fabíola do Balneário","p":"PSB"},{"n":40023,"name":"Flávio Santa Marta","p":"PSB"},{"n":40124,"name":"Gardênia Grigorio do Trabalho","p":"PSB"},{"n":40169,"name":"Inês Brasil","p":"PSB"},{"n":40797,"name":"Iyalorisa Janaina","p":"PSB"},{"n":40555,"name":"Jaque Joy","p":"PSB"},{"n":40100,"name":"Jari","p":"PSB"},{"n":40002,"name":"Jean Moraes","p":"PSB"},{"n":40022,"name":"Jorginho da Uruguaiana","p":"PSB"},{"n":40303,"name":"José Everaldo","p":"PSB"},{"n":40707,"name":"Junior Mototáxi","p":"PSB"},{"n":40809,"name":"Levi Alves","p":"PSB"},{"n":40456,"name":"Lili Soldadora","p":"PSB"},{"n":40888,"name":"Luciana Rodrigues","p":"PSB"},{"n":40751,"name":"Lélio","p":"PSB"},{"n":40055,"name":"Maicon Nascimento","p":"PSB"},{"n":40010,"name":"Marcelo Fritz","p":"PSB"},{"n":40008,"name":"Marcinha do Povo","p":"PSB"},{"n":40145,"name":"Marco Figueiredo","p":"PSB"},{"n":40047,"name":"Mariléa da Saúde","p":"PSB"},{"n":40384,"name":"Mc Geléia","p":"PSB"},{"n":40333,"name":"Mestre Garnisé","p":"PSB"},{"n":40903,"name":"Michelle Almeida","p":"PSB"},{"n":40335,"name":"Molina","p":"PSB"},{"n":40020,"name":"Niltinho","p":"PSB"},{"n":40104,"name":"Nilton Salomão","p":"PSB"},{"n":40005,"name":"Noel Martello","p":"PSB"},{"n":40654,"name":"Pastor Carlos Silva","p":"PSB"},{"n":40339,"name":"Pastor Luiz Gomes","p":"PSB"},{"n":40021,"name":"Paulo Horn","p":"PSB"},{"n":40510,"name":"Peba","p":"PSB"},{"n":40029,"name":"Rafael Pizziali","p":"PSB"},{"n":40004,"name":"Renato Pellizzari","p":"PSB"},{"n":40012,"name":"Robinho Santa Luzia","p":"PSB"},{"n":40440,"name":"Rosinha","p":"PSB"},{"n":40127,"name":"Sandra Borges","p":"PSB"},{"n":40052,"name":"Tania de Brás de Pina90","p":"PSB"},{"n":40846,"name":"Tia Val","p":"PSB"},{"n":40659,"name":"Tia do Café","p":"PSB"},{"n":40133,"name":"Vandynho","p":"PSB"},{"n":40999,"name":"Vantoil Martins","p":"PSB"},{"n":40260,"name":"Vilson Lennon","p":"PSB"},{"n":40321,"name":"Wagner Tavares","p":"PSB"},{"n":40444,"name":"Walace Presidente","p":"PSB"},{"n":40777,"name":"Wesley Teixeira","p":"PSB"},{"n":40315,"name":"Índio","p":"PSB"}]},{"id":"psd","name":"PSD","short":"PSD","parties":[{"num":55,"sigla":"PSD"}],"candidates":[{"n":55007,"name":"Aguinaldo Luis","p":"PSD"},{"n":55755,"name":"Alex Amarante","p":"PSD"},{"n":55632,"name":"Alzenir","p":"PSD"},{"n":55500,"name":"Ana Paula Mendes","p":"PSD"},{"n":55321,"name":"André Correa","p":"PSD"},{"n":55554,"name":"Annibal da Paz","p":"PSD"},{"n":55140,"name":"Bernardo Santoro","p":"PSD"},{"n":55024,"name":"Bia Bogossian","p":"PSD"},{"n":55088,"name":"Carla Machado","p":"PSD"},{"n":55121,"name":"Carol Guedes","p":"PSD"},{"n":55155,"name":"Celia Jordão","p":"PSD"},{"n":55789,"name":"Christian Bernardo","p":"PSD"},{"n":55200,"name":"Cidinho Sampaio","p":"PSD"},{"n":55533,"name":"Clarice Santos","p":"PSD"},{"n":55001,"name":"Claudia Vasconcellos","p":"PSD"},{"n":55622,"name":"Claudio Caiado","p":"PSD"},{"n":55180,"name":"Cris Kaizer","p":"PSD"},{"n":55190,"name":"Daniel Correa","p":"PSD"},{"n":55011,"name":"Davi do Esporte","p":"PSD"},{"n":55015,"name":"Delegado Léo","p":"PSD"},{"n":55018,"name":"Diretora Ana Paula","p":"PSD"},{"n":55255,"name":"Dr. Lucas","p":"PSD"},{"n":55571,"name":"Dra. Gláucia Araújo","p":"PSD"},{"n":55577,"name":"Dra. Glória","p":"PSD"},{"n":55077,"name":"Elinete Girard","p":"PSD"},{"n":55033,"name":"Elis Almeida","p":"PSD"},{"n":55222,"name":"Elton Cristo","p":"PSD"},{"n":55188,"name":"Enfermeira Denise Custódio","p":"PSD"},{"n":55025,"name":"Fabiana Rodrigues","p":"PSD"},{"n":55288,"name":"Fernanda Leal","p":"PSD"},{"n":55501,"name":"Flavio Valle","p":"PSD"},{"n":55555,"name":"Guilherme Schleder","p":"PSD"},{"n":55510,"name":"Josiê Nogueira","p":"PSD"},{"n":55557,"name":"Joyce Trindade","p":"PSD"},{"n":55021,"name":"João Pires","p":"PSD"},{"n":55889,"name":"Junia Cardoso","p":"PSD"},{"n":55620,"name":"Junior da Lucinha","p":"PSD"},{"n":55020,"name":"Laprovita","p":"PSD"},{"n":55900,"name":"Leleco de Costa Barros","p":"PSD"},{"n":55678,"name":"Luiz Paulo","p":"PSD"},{"n":55019,"name":"Luiz Ramos Filho","p":"PSD"},{"n":55762,"name":"Major Luigi","p":"PSD"},{"n":55551,"name":"Marcelinho das Comunidades","p":"PSD"},{"n":55455,"name":"Marcelo Cabeleireiro","p":"PSD"},{"n":55004,"name":"Marcio Andrade","p":"PSD"},{"n":55800,"name":"Marcos Marins","p":"PSD"},{"n":55333,"name":"Mirian Porto","p":"PSD"},{"n":55133,"name":"Murilo du Rio","p":"PSD"},{"n":55151,"name":"Ozires Maia","p":"PSD"},{"n":55100,"name":"Patrick Nadinho","p":"PSD"},{"n":55300,"name":"Pedro Duarte","p":"PSD"},{"n":55022,"name":"Prof. Maurilia Rodrigues","p":"PSD"},{"n":55150,"name":"Professor Alexandre Nogueira","p":"PSD"},{"n":55070,"name":"Professora Marcia Martins","p":"PSD"},{"n":55005,"name":"Rafael Sorrilha","p":"PSD"},{"n":55029,"name":"Richard Casares","p":"PSD"},{"n":55888,"name":"Ronaldo Moreira Acs","p":"PSD"},{"n":55400,"name":"Ruan Valle Foox","p":"PSD"},{"n":55040,"name":"Serginho Moreno","p":"PSD"},{"n":55000,"name":"Sérgio Fernandes","p":"PSD"},{"n":55050,"name":"Valdir Batista","p":"PSD"},{"n":55123,"name":"Vinícius Cozzolino","p":"PSD"},{"n":55456,"name":"Wagner Montes","p":"PSD"},{"n":55111,"name":"Wernon Presley","p":"PSD"},{"n":55012,"name":"Zico Zona Oeste Raiz","p":"PSD"},{"n":55055,"name":"Átila Nunes","p":"PSD"}]},{"id":"psdbcid","name":"Federação PSDB Cidadania","short":"PSDB/Cidadania","parties":[{"num":23,"sigla":"Cidadania"},{"num":45,"sigla":"PSDB"}],"candidates":[{"n":23980,"name":"Agueda Moura","p":"Cidadania"},{"n":45605,"name":"Albino Batista","p":"PSDB"},{"n":45077,"name":"Alessandra Oliveira","p":"PSDB"},{"n":45222,"name":"Alessandro Mutante","p":"PSDB"},{"n":45453,"name":"Alexandre Inocêncio","p":"PSDB"},{"n":23222,"name":"André Martins","p":"Cidadania"},{"n":45010,"name":"Antonio França","p":"PSDB"},{"n":45965,"name":"Bruna Mello","p":"PSDB"},{"n":45016,"name":"Carlinhos Vieira - The Best 16","p":"PSDB"},{"n":45450,"name":"Charles Fiscal do Povo","p":"PSDB"},{"n":45132,"name":"Chiquinho do Pandeiro","p":"PSDB"},{"n":45004,"name":"Chris da Quatro Patinhas","p":"PSDB"},{"n":45202,"name":"Cinthia Castilho","p":"PSDB"},{"n":45555,"name":"Comissário Marcio Garcia","p":"PSDB"},{"n":45111,"name":"César Almeida","p":"PSDB"},{"n":23765,"name":"D'glória","p":"Cidadania"},{"n":45333,"name":"Dani Leal","p":"PSDB"},{"n":45110,"name":"Dani do Povo","p":"PSDB"},{"n":45455,"name":"Diego Alba","p":"PSDB"},{"n":45554,"name":"Diogo Ventura","p":"PSDB"},{"n":45666,"name":"Doutora Marcia Valeria","p":"PSDB"},{"n":45999,"name":"Dr. Henrique Paes","p":"PSDB"},{"n":45145,"name":"Eliezer Rocha","p":"PSDB"},{"n":45800,"name":"Etienne Ciminelli","p":"PSDB"},{"n":45522,"name":"Fabinho Câmara","p":"PSDB"},{"n":45399,"name":"Fabio Soares","p":"PSDB"},{"n":45444,"name":"Felipe dos Aposentados","p":"PSDB"},{"n":45678,"name":"Filipe Rr Soares","p":"PSDB"},{"n":45079,"name":"Glauber Rocha","p":"PSDB"},{"n":45007,"name":"Guarda Gaby","p":"PSDB"},{"n":45789,"name":"Helem Cristina","p":"PSDB"},{"n":45009,"name":"Ivan do Valle","p":"PSDB"},{"n":45003,"name":"Jarro Pipas","p":"PSDB"},{"n":45006,"name":"Jorge Tavares","p":"PSDB"},{"n":45000,"name":"Junior Paixão","p":"PSDB"},{"n":45101,"name":"Jussie da Cesta Basica","p":"PSDB"},{"n":45023,"name":"Júlio Guerreiro","p":"PSDB"},{"n":45321,"name":"Júnior Falcão","p":"PSDB"},{"n":45876,"name":"Laura da Saúde","p":"PSDB"},{"n":45777,"name":"Lessa","p":"PSDB"},{"n":45200,"name":"Luiz Martins","p":"PSDB"},{"n":45456,"name":"Léo Vieira Filho","p":"PSDB"},{"n":45013,"name":"Manoel Sales","p":"PSDB"},{"n":45369,"name":"Marcelino D'almeida","p":"PSDB"},{"n":45021,"name":"Marcelo da Construção","p":"PSDB"},{"n":45125,"name":"Maria Helena Cabo","p":"PSDB"},{"n":45345,"name":"Marilena da Saúde","p":"PSDB"},{"n":45390,"name":"Neto Bronson","p":"PSDB"},{"n":45055,"name":"O Pracinha Renato Nascimento","p":"PSDB"},{"n":45245,"name":"Pastora Maria da Penha","p":"PSDB"},{"n":45618,"name":"Prof. Vera Lúcia","p":"PSDB"},{"n":45059,"name":"Professora Aline Pires","p":"PSDB"},{"n":45963,"name":"Professora Sonia","p":"PSDB"},{"n":23333,"name":"Regina Pedregal","p":"Cidadania"},{"n":45123,"name":"Ricardo da Karol","p":"PSDB"},{"n":45210,"name":"Rodrigo Dinamite","p":"PSDB"},{"n":45001,"name":"Salgadinho do Frete","p":"PSDB"},{"n":45334,"name":"Sandra Aleixo","p":"PSDB"},{"n":45277,"name":"Sandrinho Abdala","p":"PSDB"},{"n":45121,"name":"Sandro Alves","p":"PSDB"},{"n":23454,"name":"Sargento Gustavo","p":"Cidadania"},{"n":45244,"name":"Serginho Legado","p":"PSDB"},{"n":23018,"name":"Sgt Calvete","p":"Cidadania"},{"n":45045,"name":"Thiago Moura","p":"PSDB"},{"n":45888,"name":"Tio Carlos","p":"PSDB"},{"n":45019,"name":"Vandete Soares","p":"PSDB"},{"n":45500,"name":"Vandro Família","p":"PSDB"},{"n":23444,"name":"Vera Ramos","p":"Cidadania"}]},{"id":"psolrede","name":"Federação PSOL REDE","short":"PSOL/Rede","parties":[{"num":18,"sigla":"Rede"},{"num":50,"sigla":"PSOL"}],"candidates":[{"n":50800,"name":"Alexandre Vr Abandonada","p":"PSOL"},{"n":18013,"name":"Alvaro Travassos","p":"Rede"},{"n":50080,"name":"Anderson Ribeiro","p":"PSOL"},{"n":50033,"name":"Cabelinho Turismo","p":"PSOL"},{"n":50000,"name":"Clarice Chacon","p":"PSOL"},{"n":50666,"name":"Cristiane Nascimento","p":"PSOL"},{"n":50050,"name":"Dani Monteiro","p":"PSOL"},{"n":18021,"name":"De Loys","p":"Rede"},{"n":18000,"name":"Eliomar Coelho","p":"Rede"},{"n":50100,"name":"Emanuel Alencar","p":"PSOL"},{"n":50010,"name":"Fabíola Rodrigues","p":"PSOL"},{"n":50123,"name":"Flavio Serafini","p":"PSOL"},{"n":18888,"name":"Ingrid","p":"Rede"},{"n":18121,"name":"Jaime Albino Veloso","p":"Rede"},{"n":50222,"name":"Jefferson Vinco","p":"PSOL"},{"n":18180,"name":"Joe Ventura","p":"Rede"},{"n":18088,"name":"Juninho Sepetiba Avera","p":"Rede"},{"n":50900,"name":"Leeblon da Culturarj","p":"PSOL"},{"n":50200,"name":"Leko Leonardo","p":"PSOL"},{"n":50180,"name":"Luciana Boiteux","p":"PSOL"},{"n":18007,"name":"Marcelo Nunes","p":"Rede"},{"n":50555,"name":"Marcus Lopes","p":"PSOL"},{"n":18123,"name":"Mc Smith","p":"Rede"},{"n":18369,"name":"Monica Bicudo","p":"Rede"},{"n":50077,"name":"Monica Cunha","p":"PSOL"},{"n":18234,"name":"Mãe Maria de Xangô","p":"Rede"},{"n":50111,"name":"Paulo Pinheiro","p":"PSOL"},{"n":50321,"name":"Pedro Nassif","p":"PSOL"},{"n":18345,"name":"Prof Raul","p":"Rede"},{"n":50500,"name":"Prof. Josemar","p":"PSOL"},{"n":50101,"name":"Professor Antonio Augusto","p":"PSOL"},{"n":18618,"name":"Professor Marcio","p":"Rede"},{"n":50007,"name":"Renata Souza","p":"PSOL"},{"n":18321,"name":"Robson Paz","p":"Rede"},{"n":18188,"name":"Tereza Arapium","p":"Rede"},{"n":50700,"name":"Yuri Moura","p":"PSOL"}]},{"id":"pstu","name":"PSTU","short":"PSTU","parties":[{"num":16,"sigla":"PSTU"}],"candidates":[{"n":16016,"name":"Jad Avila","p":"PSTU"},{"n":16123,"name":"Lorran Neves","p":"PSTU"}]},{"id":"republicanos","name":"Republicanos","short":"Republicanos","parties":[{"num":10,"sigla":"Republicanos"}],"candidates":[{"n":10020,"name":"Andre Ferreira Em Ação","p":"Republicanos"},{"n":10999,"name":"Andre das Clínicas","p":"Republicanos"},{"n":10193,"name":"Bombeiro Pires Vaz","p":"Republicanos"},{"n":10100,"name":"Carlos Macedo","p":"Republicanos"},{"n":10021,"name":"Clayton Oliveira","p":"Republicanos"},{"n":10505,"name":"Cleide Duarte","p":"Republicanos"},{"n":10666,"name":"Cleiton Silva","p":"Republicanos"},{"n":10007,"name":"Comissario Aranha","p":"Republicanos"},{"n":10051,"name":"Coronel William Sodre","p":"Republicanos"},{"n":10610,"name":"Dani Martins","p":"Republicanos"},{"n":10888,"name":"Delegada Tatiana Queiroz","p":"Republicanos"},{"n":10190,"name":"Dr. Eliezer","p":"Republicanos"},{"n":10131,"name":"Dr. Marcos Fernandes","p":"Republicanos"},{"n":10101,"name":"Dra Alexandra Gomes","p":"Republicanos"},{"n":10661,"name":"Dra Denise Cordeiro","p":"Republicanos"},{"n":10985,"name":"Dra. Daniele Santos","p":"Republicanos"},{"n":10033,"name":"Edmar Braga","p":"Republicanos"},{"n":10093,"name":"Erik Julio","p":"Republicanos"},{"n":10800,"name":"Fernando Colosso","p":"Republicanos"},{"n":10026,"name":"Fred Rocha","p":"Republicanos"},{"n":10555,"name":"Gabriel Gonçalves","p":"Republicanos"},{"n":10077,"name":"Gayoso","p":"Republicanos"},{"n":10173,"name":"Glaucio Marujo","p":"Republicanos"},{"n":10476,"name":"Graciara Vendedora de Doces","p":"Republicanos"},{"n":10298,"name":"Hugo Rodrigues","p":"Republicanos"},{"n":10233,"name":"Isla Costa","p":"Republicanos"},{"n":10011,"name":"Italo Godinho","p":"Republicanos"},{"n":10223,"name":"Jean Pierre","p":"Republicanos"},{"n":10200,"name":"Jose Araujo","p":"Republicanos"},{"n":10700,"name":"Josue Frota","p":"Republicanos"},{"n":10135,"name":"Lala Oliveira","p":"Republicanos"},{"n":10456,"name":"Leandro","p":"Republicanos"},{"n":10789,"name":"Lecinho","p":"Republicanos"},{"n":10000,"name":"Librelon","p":"Republicanos"},{"n":10777,"name":"Ligia Alves","p":"Republicanos"},{"n":10212,"name":"Lisiany Braga","p":"Republicanos"},{"n":10127,"name":"Luciano Resende","p":"Republicanos"},{"n":10771,"name":"Marcia Paiva Mae Loira","p":"Republicanos"},{"n":10510,"name":"Maria da Penha","p":"Republicanos"},{"n":10220,"name":"Mario Vianna","p":"Republicanos"},{"n":10550,"name":"Mauricio Valente","p":"Republicanos"},{"n":10111,"name":"Milton Bahia","p":"Republicanos"},{"n":10627,"name":"Pastor Daniel Ramos","p":"Republicanos"},{"n":10047,"name":"Paula Bispo","p":"Republicanos"},{"n":10300,"name":"Pedro Henrique Pelo Rio","p":"Republicanos"},{"n":10345,"name":"Professora Adriana França","p":"Republicanos"},{"n":10401,"name":"Professora Janaina Ribeiro","p":"Republicanos"},{"n":10050,"name":"Rafael da Empada","p":"Republicanos"},{"n":10321,"name":"Rafaela Barros Pcd","p":"Republicanos"},{"n":10097,"name":"Rebeca Pestana","p":"Republicanos"},{"n":10333,"name":"Renan Mendonça","p":"Republicanos"},{"n":10808,"name":"Ricardo Naval","p":"Republicanos"},{"n":10222,"name":"Rodrigo Cabeção","p":"Republicanos"},{"n":10155,"name":"Rogerio Gato Manso","p":"Republicanos"},{"n":10980,"name":"Ronald Alves Musicoterapeuta","p":"Republicanos"},{"n":10022,"name":"Sapo","p":"Republicanos"},{"n":10001,"name":"Sargento Britto","p":"Republicanos"},{"n":10762,"name":"Sgt Costa","p":"Republicanos"},{"n":10121,"name":"Solange do Charme","p":"Republicanos"},{"n":10528,"name":"Thaianne Moraes","p":"Republicanos"},{"n":10611,"name":"Thiago Virgílio","p":"Republicanos"},{"n":10123,"name":"Tia Ju","p":"Republicanos"},{"n":10342,"name":"Topete","p":"Republicanos"},{"n":10987,"name":"Ulisses Gall","p":"Republicanos"},{"n":10110,"name":"Velloso A Voz do Povo","p":"Republicanos"},{"n":10234,"name":"Vicente Portella","p":"Republicanos"},{"n":10444,"name":"Wallace Russo","p":"Republicanos"}]},{"id":"uniprog","name":"Federação União Progressista","short":"União/PP","parties":[{"num":11,"sigla":"PP"},{"num":44,"sigla":"União"}],"candidates":[{"n":11009,"name":"Adriana Antunes","p":"PP"},{"n":11199,"name":"Andréa Germano","p":"PP"},{"n":44888,"name":"Bruno Dauaire","p":"União"},{"n":11444,"name":"Carla Saar","p":"PP"},{"n":11777,"name":"Carlinhos Bnh","p":"PP"},{"n":11131,"name":"Carlos Cunha","p":"PP"},{"n":11040,"name":"Ciana Viana","p":"PP"},{"n":44488,"name":"Cleissiane","p":"União"},{"n":11888,"name":"Cynthia Augusto","p":"PP"},{"n":44180,"name":"Daiane Luna","p":"União"},{"n":11222,"name":"Delegado Bernardo Leal","p":"PP"},{"n":11404,"name":"Dellon da Juventude","p":"PP"},{"n":44117,"name":"Di Ribeiro","p":"União"},{"n":44122,"name":"Dinho do Canella","p":"União"},{"n":11111,"name":"Dionisio Lins","p":"PP"},{"n":11772,"name":"Dr J Santana","p":"PP"},{"n":11678,"name":"Dr. Aloisio Barbosa","p":"PP"},{"n":44222,"name":"Dr. Andrinho","p":"União"},{"n":11011,"name":"Dr. Bernardo Barros","p":"PP"},{"n":11322,"name":"Dr. Marcello Autran","p":"PP"},{"n":11789,"name":"Dr. Marcus Guedes","p":"PP"},{"n":11555,"name":"Dra Natália Negreiros","p":"PP"},{"n":44001,"name":"Dra. Renata Melo","p":"União"},{"n":44567,"name":"Duda Ganem","p":"União"},{"n":11192,"name":"Enfermeira Ka Barbosa","p":"PP"},{"n":11227,"name":"Enfermeira Luciene","p":"PP"},{"n":44777,"name":"Engenheiro Uruan","p":"União"},{"n":44300,"name":"Fabio Silva","p":"União"},{"n":11021,"name":"Felipe Michel","p":"PP"},{"n":11123,"name":"Felipe Pampolha","p":"PP"},{"n":11500,"name":"Felipinho Ravis","p":"PP"},{"n":44555,"name":"Filipe Bustilho","p":"União"},{"n":11122,"name":"Folha","p":"PP"},{"n":11636,"name":"Francisco Filho Chiquinho","p":"PP"},{"n":11999,"name":"Geferson do Cqo","p":"PP"},{"n":44100,"name":"Gesiel Lessa","p":"União"},{"n":11212,"name":"Gustavo Tutuca","p":"PP"},{"n":11258,"name":"Hygor Barcellos","p":"PP"},{"n":44044,"name":"Jonas Fernando","p":"União"},{"n":11001,"name":"Karol Mendez","p":"PP"},{"n":44077,"name":"Mari Karmouche","p":"União"},{"n":11100,"name":"Marize Araújo","p":"PP"},{"n":11007,"name":"Meire Moura","p":"PP"},{"n":44444,"name":"Márcio Canella","p":"União"},{"n":11333,"name":"Naldinho","p":"PP"},{"n":44030,"name":"Patricia Egidio","p":"União"},{"n":44288,"name":"Paulo Melo","p":"União"},{"n":44111,"name":"Penha Bernardes","p":"União"},{"n":11355,"name":"Prof. Edson Pantera","p":"PP"},{"n":44000,"name":"Rafael Nobre","p":"União"},{"n":44333,"name":"Rafael Picciani","p":"União"},{"n":44400,"name":"Rafaelle Firmino","p":"União"},{"n":44144,"name":"Renata Ramos","p":"União"},{"n":44244,"name":"Rheury Scheidegger","p":"União"},{"n":11142,"name":"Ricardo Boareto","p":"PP"},{"n":11155,"name":"Rubens da Indicação Social","p":"PP"},{"n":11633,"name":"Sandro Ritton","p":"PP"},{"n":11190,"name":"Sargento Flavia Louzada","p":"PP"},{"n":11000,"name":"Sonia Samudio","p":"PP"},{"n":44678,"name":"Tamiris Peixoto","p":"União"},{"n":11456,"name":"Tatiana Oliveira","p":"PP"},{"n":44677,"name":"Tatiana Oliveira de Castro","p":"União"},{"n":44321,"name":"Wallace Pala Pala","p":"União"},{"n":11277,"name":"Zico Pqd","p":"PP"}]},{"id":"up","name":"UP","short":"UP","parties":[{"num":80,"sigla":"UP"}],"candidates":[{"n":80800,"name":"Bianca Rubim","p":"UP"},{"n":80456,"name":"Dulce","p":"UP"},{"n":80123,"name":"Elza e Eunice do Mlb","p":"UP"},{"n":80000,"name":"Henderson","p":"UP"},{"n":80180,"name":"Monique Zuma","p":"UP"},{"n":80080,"name":"Ruan Vidal","p":"UP"}]}]},"sen":{"seats":2,"candidates":[{"n":131,"name":"Benedita da Silva","p":"PT","coal":"Juntos para Mudar, Coragem para Reconstruir"},{"n":221,"name":"Carlos Jordy","p":"PL","coal":""},{"n":222,"name":"Carlos Portinho","p":"PL","coal":""},{"n":144,"name":"Helio Secco","p":"Missão","coal":""},{"n":280,"name":"Luciano Mattos","p":"PRTB","coal":""},{"n":290,"name":"Luiz Eugenio","p":"PCO","coal":""},{"n":100,"name":"Marcelo Crivella","p":"Republicanos","coal":""},{"n":200,"name":"Marcos Dias","p":"Podemos","coal":""},{"n":800,"name":"Michelly Xavier","p":"UP","coal":""},{"n":500,"name":"Monica Benicio","p":"PSOL","coal":""},{"n":160,"name":"Paula Falcão","p":"PSTU","coal":""},{"n":555,"name":"Pedro Paulo","p":"PSD","coal":"Juntos para Mudar, Coragem para Reconstruir"},{"n":808,"name":"Vinicius Benevides","p":"UP","coal":""},{"n":101,"name":"Waguinho","p":"Republicanos","coal":""},{"n":355,"name":"Ó Clemente","p":"Democrata","coal":""}]},"gov":{"seats":1,"candidates":[{"n":30,"name":"André Marinho","p":"Novo","coal":""},{"n":14,"name":"Coronel Busnello","p":"Missão","coal":""},{"n":16,"name":"Cyro Garcia","p":"PSTU","coal":""},{"n":22,"name":"Douglas Ruas","p":"PL","coal":"Rio Real"},{"n":55,"name":"Eduardo Paes","p":"PSD","coal":"Juntos para Mudar, Coragem para Reconstruir"},{"n":10,"name":"Garotinho","p":"Republicanos","coal":"Coragem para Mudar"},{"n":80,"name":"Juliete","p":"UP","coal":""},{"n":29,"name":"Luan Monteiro","p":"PCO","coal":""},{"n":50,"name":"William Siri","p":"PSOL","coal":""}]}}};</script>
+<script>// ===== Engine: pure functions, no DOM =====
+// Proportional seat allocation (Código Eleitoral arts. 106-111, with the STF 2024 reading of art. 109 III)
+const Engine = (() => {
+  // QE: fraction <= 0.5 rounds down, > 0.5 rounds up
+  function quocienteEleitoral(valid, seats) {
+    if (!(valid > 0) || !(seats > 0)) return 0;
+    const q = valid / seats;
+    const f = Math.floor(q);
+    return (q - f) > 0.5 ? f + 1 : f;
+  }
+
+  // lists: [{id, name, votes (list total), cands: [{key, name, votes}] }]
+  // cands need not be sorted; we sort here (desc votes, then name).
+  // opts: {valid, seats}
+  function allocate(lists, opts) {
+    const seats = opts.seats;
+    const valid = opts.valid;
+    const QE = quocienteEleitoral(valid, seats);
+    const res = {
+      QE, valid, seats,
+      t10: QE * 0.10, t20: QE * 0.20, t80: QE * 0.80,
+      lists: {}, elected: [], rounds: [], unfilled: 0, mode: 'normal', ties: []
+    };
+    const L = lists.map(l => {
+      const cands = (l.sorted ? l.cands : l.cands.slice().sort(byVotesThenName));
+      return { id: l.id, name: l.name, votes: l.votes || 0, cands, seats: 0, qp: 0, s1: 0, s2: 0, s3: 0, next: 0 };
+    });
+    L.forEach(l => { res.lists[l.id] = l; });
+    if (QE <= 0) { res.unfilled = seats; return res; }
+
+    const anyReachesQE = L.some(l => l.votes >= QE);
+    if (!anyReachesQE) {
+      // art. 111: most voted candidates overall
+      res.mode = 'art111';
+      const all = [];
+      L.forEach(l => l.cands.forEach(c => { if (c.votes > 0) all.push({ l, c }); }));
+      all.sort((a, b) => b.c.votes - a.c.votes || cmpName(a.c.name, b.c.name));
+      for (let i = 0; i < Math.min(seats, all.length); i++) {
+        const { l, c } = all[i];
+        l.seats++; l.next++;
+        res.elected.push(mk(l, c, 'art111', 0));
+      }
+      res.unfilled = seats - res.elected.length;
+      return res;
+    }
+
+    // Phase 1: QP seats, candidates with >= 10% QE
+    let filled = 0;
+    for (const l of L) {
+      l.qp = Math.floor(l.votes / QE);
+      let got = 0;
+      while (got < l.qp && l.next < l.cands.length && l.cands[l.next].votes >= res.t10 && l.cands[l.next].votes > 0) {
+        res.elected.push(mk(l, l.cands[l.next], 'qp', 0));
+        l.next++; got++;
+      }
+      l.seats = got; l.s1 = got;
+      filled += got;
+    }
+    // Guard against over-allocation (only possible if sum of QP > seats, which cannot happen mathematically, but be safe)
+    let left = seats - filled;
+    let round = 0;
+
+    // Phase 2: lists >= 80% QE, candidate >= 20% QE
+    while (left > 0) {
+      const cand = [];
+      for (const l of L) {
+        if (l.votes < res.t80) continue;
+        const c = l.cands[l.next];
+        if (!c || c.votes < res.t20 || !(c.votes > 0)) continue;
+        cand.push({ l, avg: l.votes / (l.seats + 1) });
+      }
+      if (!cand.length) break;
+      cand.sort(byAvg);
+      noteTie(res, cand, 2, round + 1);
+      const w = cand[0].l;
+      round++;
+      res.rounds.push({ round, phase: 2, winner: w.id, avgs: cand.map(x => ({ id: x.l.id, avg: x.avg })) });
+      res.elected.push(mk(w, w.cands[w.next], 's2', round));
+      w.next++; w.seats++; w.s2++; left--;
+    }
+
+    // Phase 3: all lists (STF 2024), any unelected candidate with votes
+    while (left > 0) {
+      const cand = [];
+      for (const l of L) {
+        if (!(l.votes > 0)) continue;
+        const c = l.cands[l.next];
+        if (!c || !(c.votes > 0)) continue;
+        cand.push({ l, avg: l.votes / (l.seats + 1) });
+      }
+      if (!cand.length) break;
+      cand.sort(byAvg);
+      noteTie(res, cand, 3, round + 1);
+      const w = cand[0].l;
+      round++;
+      res.rounds.push({ round, phase: 3, winner: w.id, avgs: cand.map(x => ({ id: x.l.id, avg: x.avg })) });
+      res.elected.push(mk(w, w.cands[w.next], 's3', round));
+      w.next++; w.seats++; w.s3++; left--;
+    }
+    res.unfilled = left;
+
+    // Candidate ties at the cut line inside a list (law: older wins; we have no ages)
+    for (const l of L) {
+      if (l.next > 0 && l.next < l.cands.length) {
+        const a = l.cands[l.next - 1], b = l.cands[l.next];
+        if (a.votes > 0 && a.votes === b.votes && !(a.auto && b.auto)) res.ties.push({ kind: 'cand', list: l.id, names: [a.name, b.name], votes: a.votes });
+      }
+    }
+    return res;
+  }
+
+  function mk(l, c, how, round) { return { key: c.key, name: c.name, list: l.id, votes: c.votes, how, round, auto: !!c.auto }; }
+  function byVotesThenName(a, b) { return (b.votes - a.votes) || cmpName(a.name, b.name); }
+  function cmpName(a, b) { return a < b ? -1 : a > b ? 1 : 0; }
+  function byAvg(a, b) { return (b.avg - a.avg) || (b.l.votes - a.l.votes) || cmpName(a.l.name, b.l.name); }
+  function noteTie(res, cand, phase, round) {
+    if (cand.length > 1 && cand[0].avg === cand[1].avg) res.ties.push({ kind: 'avg', phase, round, lists: [cand[0].l.id, cand[1].l.id] });
+  }
+
+  // Build list totals and candidate votes from inputs.
+  // spec: {id, name, cands:[{key,name}], total (num|null), legenda (num|null), outros (num|null), candVotes: {key: num}}
+  function buildList(spec) {
+    const blanks = [];
+    let filled = 0;
+    const cands = spec.cands.map(c => {
+      const v = spec.candVotes[c.key];
+      if (v != null && v !== '' && isFinite(v)) { const n = Math.max(0, Math.round(+v)); filled += n; return { key: c.key, name: c.name, votes: n, auto: false }; }
+      const o = { key: c.key, name: c.name, votes: 0, auto: false, blank: true };
+      blanks.push(o);
+      return o;
+    });
+    const leg = num(spec.legenda);
+    let outros, total, warn = null;
+    const T = num(spec.total);
+    if (spec.total != null && spec.total !== '' && isFinite(spec.total)) {
+      const rest = T - leg - filled;
+      if (rest < 0) { warn = 'over'; outros = 0; total = leg + filled; }
+      else { outros = rest; total = T; }
+    } else {
+      outros = num(spec.outros);
+      total = leg + filled + outros;
+    }
+    // Equal split of outros among blank candidates; remainder 1 vote each to first alphabetically
+    let orphan = 0;
+    if (outros > 0) {
+      if (blanks.length) {
+        const k = blanks.length;
+        const each = Math.floor(outros / k);
+        let r = outros - each * k;
+        const alpha = blanks.slice().sort((a, b) => cmpName(a.name, b.name));
+        for (const b of alpha) { b.votes = each + (r > 0 ? 1 : 0); if (r > 0) r--; b.auto = b.votes > 0; }
+      } else orphan = outros;
+    }
+    return { id: spec.id, name: spec.name, votes: total, legenda: leg, outros, filled, orphan, warn, cands };
+  }
+  function num(v) { const n = +v; return (v == null || v === '' || !isFinite(n)) ? 0 : Math.max(0, Math.round(n)); }
+
+  // Smallest extra legenda votes for list id to gain one seat (others fixed). valid = max(base, sum+x).
+  function votesForNextSeat(built, id, base, seats) {
+    const idx = built.findIndex(l => l.id === id);
+    if (idx < 0) return null;
+    const sorted = built.map(l => ({ id: l.id, name: l.name, votes: l.votes, cands: l.cands.slice().sort(byVotesThenName), sorted: true }));
+    const sum = sorted.reduce((s, l) => s + l.votes, 0);
+    const run = x => {
+      const ls = sorted.map((l, i) => i === idx ? Object.assign({}, l, { votes: l.votes + x }) : l);
+      return allocate(ls, { valid: Math.max(base, sum + x), seats }).lists[id].seats;
+    };
+    const cur = run(0);
+    let hi = Math.max(1, Math.round(base));
+    if (run(hi) <= cur) return null;
+    let lo = 0;
+    while (hi - lo > 1) { const mid = Math.floor((lo + hi) / 2); if (run(mid) > cur) hi = mid; else lo = mid; }
+    return hi;
+  }
+
+  return { quocienteEleitoral, allocate, buildList, votesForNextSeat, byVotesThenName };
+})();
+if (typeof module !== 'undefined') module.exports = Engine;
+</script>
+<script>
+(() => {
+'use strict';
+// ---------------- constants ----------------
+const RACES = [
+  { id:'fed', label:'Dep. Federal', title:'Deputado Federal', kind:'prop', hash:'federal' },
+  { id:'est', label:'Dep. Estadual', title:'Deputado Estadual (ALERJ)', kind:'prop', hash:'estadual' },
+  { id:'sen', label:'Senado', title:'Senador', kind:'maj', hash:'senado' },
+  { id:'gov', label:'Governador', title:'Governador', kind:'maj', hash:'governador' },
+];
+const LINKS = {
+  res2022: 'https://en.wikipedia.org/wiki/2022_Rio_de_Janeiro_gubernatorial_election',
+  pollsGov: 'https://www.gazetadopovo.com.br/eleicoes/2026/rio-de-janeiro/o-que-mostram-as-pesquisas-para-governador-do-rio-de-janeiro/',
+  wiki2026: 'https://pt.wikipedia.org/wiki/Elei%C3%A7%C3%B5es_estaduais_no_Rio_de_Janeiro_em_2026',
+};
+const COLORS = {
+  pl:'#1F3C88', febr:'#D0342C', psolrede:'#E8A10C', uniprog:'#138A96', psd:'#6A3FB5', republicanos:'#2D7DD2',
+  mdb:'#2E8540', pdt:'#B0306A', psb:'#F26B38', pode:'#86B33C', novo:'#F39200', rensol:'#7A5230', psdbcid:'#4C9BE8',
+  avante:'#27A69A', democrata:'#9C7B6B', dc:'#6C8290', mobiliza:'#A6A123', missao:'#46509E', agir:'#E4578A',
+  pco:'#8E1B1B', pstu:'#C23B3B', up:'#7C1D52', prtb:'#56707D'
+};
+const PARTY_COLOR = { PL:'#1F3C88', PT:'#D0342C', PSOL:'#E8A10C', PSD:'#6A3FB5', Republicanos:'#2D7DD2', Novo:'#F39200', UP:'#7C1D52', PCO:'#8E1B1B', PSTU:'#C23B3B', Missão:'#46509E', Democrata:'#9C7B6B', PRTB:'#56707D', Podemos:'#86B33C' };
+const DEF = DATA.defaults;
+const NF = new Intl.NumberFormat('pt-BR');
+const fmt = n => NF.format(Math.round(n || 0));
+const pct = (x, d = 2) => (isFinite(x) ? x : 0).toFixed(d).replace('.', ',') + '%';
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => Array.from(el.querySelectorAll(s));
+
+// lookups
+const LISTS = {}; // race -> id -> list
+const CAND = {};  // race -> key -> {cand, list}
+for (const r of ['fed','est']) {
+  LISTS[r] = {}; CAND[r] = {};
+  for (const l of DATA.races[r].lists) { LISTS[r][l.id] = l; for (const c of l.candidates) CAND[r][c.n] = { c, l }; }
+}
+for (const r of ['sen','gov']) { CAND[r] = {}; for (const c of DATA.races[r].candidates) CAND[r][c.n] = { c }; }
+
+// ---------------- state ----------------
+function blankState() {
+  return {
+    v: 1, electorate: DATA.electorate, abst: DEF.abst,
+    rates: JSON.parse(JSON.stringify({ gov: DEF.gov, sen: DEF.sen, fed: DEF.fed, est: DEF.est })),
+    units: { fed:'v', est:'v', sen:'%', gov:'%' },
+    fed: { lists:{}, c:{} }, est: { lists:{}, c:{} }, sen: { c:{} }, gov: { c:{} },
+    runoff: { mode:'direct', a:null, b:null, pctA:null, abst:null, blank:null, null:null, tr:{} }
+  };
+}
+let S = blankState();
+const UI = { race:'fed', open:{ fed:new Set(), est:new Set() }, q:{ fed:'', est:'' }, sort:{ fed:'az', est:'az' }, rankMore:{ fed:25, est:25 }, pop:false, confirmDel:null, confirmClear:false, renaming:null };
+let scen = { id:null, name:'Sem título', dirty:false };
+let SCENARIOS = []; // {id, name, updatedAt}
+let store = null;   // 'db' | 'local'
+let db = null, downloads = null;
+
+// ---------------- derived numbers ----------------
+function turnout() { return S.electorate * (1 - S.abst / 100); }
+function validBase(r) {
+  const rt = S.rates[r]; const k = 1 - (rt.blank + rt.null) / 100;
+  return (r === 'sen' ? 2 : 1) * turnout() * Math.max(0, k);
+}
+function toVotes(r, v) { if (v == null) return null; return S.units[r] === '%' ? v / 100 * validBase(r) : v; }
+
+// ---------------- compute ----------------
+const CACHE = {};
+function computeProp(r) {
+  const base = validBase(r); const st = S[r];
+  const built = DATA.races[r].lists.map(l => {
+    const li = st.lists[l.id] || {};
+    const candVotes = {};
+    for (const c of l.candidates) { const v = st.c[c.n]; if (v != null) candVotes[c.n] = toVotes(r, v); }
+    return Engine.buildList({ id:l.id, name:l.short, cands:l.candidates.map(c => ({ key:c.n, name:c.name })),
+      total: li.T != null ? toVotes(r, li.T) : null, legenda: toVotes(r, li.L), outros: toVotes(r, li.O), candVotes });
+  });
+  const sum = built.reduce((s, l) => s + l.votes, 0);
+  const valid = Math.max(base, sum);
+  const res = Engine.allocate(built.filter(l => l.votes > 0), { valid, seats: DATA.races[r].seats });
+  const status = {};
+  for (const e of res.elected) status[e.key] = e;
+  const byId = {}; built.forEach(l => byId[l.id] = l);
+  const out = { r, base, sum, valid, over: sum > base + 0.5, built, byId, res, status, any: sum > 0 };
+  CACHE[r] = out; return out;
+}
+function computeMaj(r) {
+  const base = validBase(r);
+  const cands = DATA.races[r].candidates.map(c => ({ c, votes: Math.round(toVotes(r, S[r].c[c.n]) || 0), set: S[r].c[c.n] != null }));
+  const sum = cands.reduce((s, x) => s + x.votes, 0);
+  const valid = Math.max(base, sum);
+  cands.sort((a, b) => b.votes - a.votes || (a.c.name < b.c.name ? -1 : 1));
+  const out = { r, base, sum, valid, over: sum > base + 0.5, cands, any: sum > 0 };
+  CACHE[r] = out; return out;
+}
+function compute(r) { return RACES.find(x => x.id === r).kind === 'prop' ? computeProp(r) : computeMaj(r); }
+
+// ---------------- parsing / formatting inputs ----------------
+function parseField(str, unit) {
+  str = String(str).trim(); if (!str) return null;
+  if (unit === '%') { const n = parseFloat(str.replace(/[\s%]/g, '').replace(/\./g, '').replace(',', '.')) ; return isFinite(n) ? Math.min(100, Math.max(0, n)) : null; }
+  const d = str.replace(/[^\d]/g, ''); return d ? +d : null;
+}
+function parsePctLoose(str) { const n = parseFloat(String(str).replace(/[\s%]/g, '').replace(',', '.')); return isFinite(n) ? Math.min(100, Math.max(0, n)) : null; }
+function showField(v, unit) {
+  if (v == null) return '';
+  return unit === '%' ? String(+v.toFixed(3)).replace('.', ',') : fmt(v);
+}
+
+// ---------------- top bar: scenarios ----------------
+function renderScen() {
+  const el = $('#scen');
+  el.style.position = 'relative';
+  el.innerHTML = `
+    <div class="scen-name" title="${esc(scen.name)}">${scen.dirty ? '<i class="dirty" title="Alterações não salvas"></i>' : ''}<span>${esc(scen.name)}</span></div>
+    <button class="btn primary" id="bSave">Salvar</button>
+    <button class="btn" id="bVers" aria-expanded="${UI.pop}">Versões <span class="note">(${SCENARIOS.length})</span></button>
+    ${downloads ? '<button class="btn ghost" id="bCsv" title="Exportar a corrida aberta em CSV">Exportar CSV</button>' : ''}
+    ${UI.pop ? popoverHTML() : ''}`;
+}
+function popoverHTML() {
+  const items = SCENARIOS.map(s => {
+    const d = new Date(s.updatedAt || 0);
+    const when = s.updatedAt ? d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' }) : '';
+    if (UI.renaming === s.id) return `<div class="scen-item cur"><input class="field" id="renameIn" value="${esc(s.name)}" aria-label="Novo nome"><div class="acts"><button class="btn small primary" data-act="renameOk" data-id="${s.id}">OK</button><button class="btn small ghost" data-act="renameNo">Cancelar</button></div></div>`;
+    if (UI.confirmDel === s.id) return `<div class="scen-item"><div><div class="nm">Excluir “${esc(s.name)}”?</div><div class="dt">Não dá para desfazer.</div></div><div class="acts"><button class="btn small danger" data-act="delOk" data-id="${s.id}">Excluir</button><button class="btn small ghost" data-act="delNo">Cancelar</button></div></div>`;
+    return `<div class="scen-item ${s.id === scen.id ? 'cur' : ''}"><div style="min-width:0"><div class="nm">${esc(s.name)}</div><div class="dt">${when}</div></div>
+      <div class="acts"><button class="btn small" data-act="open" data-id="${s.id}">Abrir</button><button class="btn small ghost" data-act="dup" data-id="${s.id}" title="Duplicar">Duplicar</button><button class="btn small ghost" data-act="rename" data-id="${s.id}" title="Renomear">Renomear</button><button class="btn small ghost danger" data-act="del" data-id="${s.id}" title="Excluir">✕</button></div></div>`;
+  }).join('');
+  return `<div class="popover" id="pop" role="dialog" aria-label="Versões salvas">
+    <h3>Salvar como nova versão</h3>
+    <div class="row"><input class="field" id="saveAsName" placeholder="Nome da versão" style="flex:1" value="${scen.id ? '' : esc(scen.name === 'Sem título' ? '' : scen.name)}"><button class="btn primary" data-act="saveAs">Salvar como</button></div>
+    <h3>Versões salvas</h3>
+    <div class="scen-list">${items || '<div class="note">Nenhuma versão salva ainda.</div>'}</div>
+    <div class="row" style="justify-content:space-between"><button class="btn" data-act="new">Novo cenário em branco</button><span class="note">${store === 'db' ? 'Salvo na página' : 'Salvo só neste navegador'}</span></div>
+  </div>`;
+}
+function toast(t) { const el = $('#toast'); el.textContent = t; el.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => el.hidden = true, 2200); }
+
+async function saveScenario(asNew, name) {
+  const now = Date.now();
+  if (asNew || !scen.id) {
+    const id = 's' + now.toString(36) + Math.random().toString(36).slice(2, 6);
+    name = (name || '').trim() || ('Cenário ' + new Date(now).toLocaleDateString('pt-BR'));
+    await storePut(id, { name, updatedAt: now, state: S });
+    scen = { id, name, dirty: false };
+  } else {
+    await storePut(scen.id, { name: scen.name, updatedAt: now, state: S });
+    scen.dirty = false;
+  }
+  saveDraft(); await refreshList(); renderScen(); toast('Salvo: ' + scen.name);
+}
+// storage adapters
+async function storePut(id, body) {
+  const clean = JSON.parse(JSON.stringify(body));
+  if (store === 'db') { try { await db.collection('scenarios').doc(id).set(clean); return; } catch (e) { toast('Não foi possível salvar (' + (e && e.code || 'erro') + ')'); throw e; } }
+  const all = localAll(); all[id] = clean; localSet(all);
+}
+async function storeGet(id) {
+  if (store === 'db') { const s = await db.collection('scenarios').doc(id).get(); return s.exists ? s.data() : null; }
+  return localAll()[id] || null;
+}
+async function storeDel(id) {
+  if (store === 'db') { await db.collection('scenarios').doc(id).delete(); return; }
+  const all = localAll(); delete all[id]; localSet(all);
+}
+async function refreshList() {
+  if (store === 'db') {
+    try { const q = await db.collection('scenarios').get(); SCENARIOS = q.docs.map(d => { const x = d.data(); return { id: d.id, name: x.name, updatedAt: x.updatedAt }; }); }
+    catch (e) { SCENARIOS = []; }
+  } else { const all = localAll(); SCENARIOS = Object.entries(all).map(([id, x]) => ({ id, name: x.name, updatedAt: x.updatedAt })); }
+  SCENARIOS.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+}
+function localAll() { try { return JSON.parse(localStorage.getItem('simrj.scenarios') || '{}'); } catch (e) { return {}; } }
+function localSet(o) { try { localStorage.setItem('simrj.scenarios', JSON.stringify(o)); } catch (e) {} }
+let draftT;
+function saveDraft() { clearTimeout(draftT); draftT = setTimeout(() => { try { localStorage.setItem('simrj.draft', JSON.stringify({ S, scen, race: UI.race })); } catch (e) {} }, 300); }
+function loadDraft() { try { const d = JSON.parse(localStorage.getItem('simrj.draft') || 'null'); if (d && d.S && d.S.v === 1) { S = mergeState(d.S); scen = d.scen || scen; if (d.race) UI.race = d.race; } } catch (e) {} }
+function mergeState(x) { const b = blankState(); return Object.assign(b, x, { rates: Object.assign(b.rates, x.rates || {}), units: Object.assign(b.units, x.units || {}), runoff: Object.assign(b.runoff, x.runoff || {}) }); }
+function touch() { if (!scen.dirty) { scen.dirty = true; renderScen(); } saveDraft(); }
+
+// ---------------- turnout strip ----------------
+function renderStrip() {
+  const r = UI.race; const rt = S.rates[r];
+  const t = turnout(); const vb = validBase(r);
+  const rl = RACES.find(x => x.id === r);
+  $('#strip').innerHTML = `
+    <div class="kv"><label for="inElect">Eleitorado</label><input class="field" id="inElect" data-g="electorate" value="${fmt(S.electorate)}" inputmode="numeric"></div>
+    <div class="kv narrow"><label for="inAbst">Abstenção %</label><input class="field" id="inAbst" data-g="abst" value="${showField(S.abst,'%')}" inputmode="decimal"></div>
+    <div class="calc"><span>Comparecimento</span><b>${fmt(t)}</b></div>
+    <div class="sep"></div>
+    <div class="kv narrow"><label for="inBlank">Brancos % · ${esc(rl.label)}</label><input class="field" id="inBlank" data-g="blank" value="${showField(rt.blank,'%')}" inputmode="decimal"></div>
+    <div class="kv narrow"><label for="inNull">Nulos % · ${esc(rl.label)}</label><input class="field" id="inNull" data-g="null" value="${showField(rt.null,'%')}" inputmode="decimal"></div>
+    <div class="calc"><span>Votos válidos${r === 'sen' ? ' (2 por eleitor)' : ''}</span><b id="vbOut">${fmt(vb)}</b></div>
+    <button class="btn ghost" id="bReset" title="Volta abstenção, brancos e nulos de todas as corridas aos níveis de 2022">Resetar para 2022</button>`;
+}
+
+// ---------------- tabs ----------------
+function renderTabs() {
+  $('#tabs').innerHTML = RACES.map(r => {
+    const d = DATA.races[r.id];
+    const n = r.kind === 'prop' ? d.seats + ' vagas' : (d.seats === 2 ? '2 vagas' : '1 vaga');
+    return `<button class="tab" role="tab" data-race="${r.id}" aria-selected="${UI.race === r.id}">${r.label}<span class="cnt">${n}</span></button>`;
+  }).join('');
+}
+
+// ---------------- race view ----------------
+function renderRace() {
+  const r = UI.race; const rl = RACES.find(x => x.id === r);
+  const d = DATA.races[r];
+  const nC = rl.kind === 'prop' ? d.lists.reduce((s, l) => s + l.candidates.length, 0) : d.candidates.length;
+  const subs = { fed:`${d.seats} cadeiras na Câmara · ${nC} candidatos em ${d.lists?.length} listas`, est:`${d.seats} cadeiras na ALERJ · ${nC} candidatos em ${d.lists?.length} listas`,
+    sen:`2 cadeiras · cada eleitor vota em dois candidatos · ${nC} candidatos`, gov:`maioria absoluta dos votos válidos, senão 2º turno em 25/10 · ${nC} candidatos` };
+  const polls = (r === 'gov' || r === 'sen') ? LINKS.pollsGov : LINKS.wiki2026;
+  $('#view').innerHTML = `
+    <div class="racehead"><h2>${esc(rl.title)}</h2><span class="sub">${subs[r]}</span>
+      <span class="links"><a href="${LINKS.res2022}" target="_blank" rel="noopener">Resultados 2022 ↗</a><a href="${polls}" target="_blank" rel="noopener">Pesquisas 2026 ↗</a>${r !== 'gov' && r !== 'sen' ? '' : `<a href="${LINKS.wiki2026}" target="_blank" rel="noopener">Candidatos 2026 ↗</a>`}</span></div>
+    <div class="race">
+      <aside class="inputs" id="inputs"></aside>
+      <section class="results" id="results" aria-live="polite"></section>
+    </div>`;
+  compute(r);
+  if (rl.kind === 'prop') { renderPropInputs(); renderPropResults(); }
+  else { renderMajInputs(); renderMajResults(); }
+}
+
+// ----- proportional inputs -----
+const CHEV = '<svg class="chev" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3l5 5-5 5"/></svg>';
+function renderPropInputs() {
+  const r = UI.race; const u = S.units[r];
+  const el = $('#inputs');
+  el.innerHTML = `
+    <div class="inputs-head">
+      <div class="search"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5L14 14"/></svg>
+        <input class="field" id="q" placeholder="Buscar candidato por nome ou número" value="${esc(UI.q[r])}" aria-label="Buscar candidato"></div>
+      <div class="row" style="justify-content:space-between">
+        <div class="seg" role="group" aria-label="Unidade"><button data-unit="v" aria-pressed="${u === 'v'}">Votos</button><button data-unit="%" aria-pressed="${u === '%'}">% válidos</button></div>
+        <div class="seg" role="group" aria-label="Ordem"><button data-sort="az" aria-pressed="${UI.sort[r] === 'az'}">A–Z</button><button data-sort="votes" aria-pressed="${UI.sort[r] === 'votes'}">Mais votadas</button></div>
+      </div>
+      <div class="assign" id="assign"></div>
+    </div>
+    <div class="inputs-body" id="ibody"></div>
+    <div class="inputs-head" style="border-top:1px solid var(--line);border-bottom:0">
+      <div class="row" style="justify-content:space-between">
+        <button class="btn ghost small" data-act="collapseAll">Recolher tudo</button>
+        ${UI.confirmClear ? `<span class="row"><span class="note">Apagar todos os votos desta corrida?</span><button class="btn small danger" data-act="clearOk">Apagar</button><button class="btn small ghost" data-act="clearNo">Cancelar</button></span>` : `<button class="btn ghost small danger" data-act="clear">Limpar corrida</button>`}
+      </div>
+    </div>`;
+  renderPropBody();
+  updateAssign();
+}
+function listOrder(r) {
+  const c = CACHE[r]; const ls = DATA.races[r].lists.slice();
+  if (UI.sort[r] === 'votes' && c) ls.sort((a, b) => (c.byId[b.id].votes - c.byId[a.id].votes) || a.short.localeCompare(b.short));
+  return ls;
+}
+function renderPropBody() {
+  const r = UI.race; const body = $('#ibody'); const q = UI.q[r].trim().toLowerCase();
+  if (q) {
+    const norm = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    const nq = norm(q);
+    const hits = [];
+    for (const l of DATA.races[r].lists) for (const c of l.candidates) if (norm(c.name).includes(nq) || String(c.n).startsWith(q)) hits.push({ c, l });
+    body.innerHTML = hits.length ? `<div class="hitlist"><div class="note" style="padding:4px 0 6px">${hits.length > 80 ? '80 de ' : ''}${hits.length} resultado${hits.length > 1 ? 's' : ''}</div><div class="cands">${hits.slice(0, 80).map(h => candRow(r, h.c, h.l)).join('')}</div></div>`
+      : `<div class="empty">Nenhum candidato encontrado para “${esc(UI.q[r])}”.</div>`;
+    updateRowsDerived();
+    return;
+  }
+  body.innerHTML = listOrder(r).map(l => folderHTML(r, l)).join('');
+  updateFoldersDerived();
+}
+function folderHTML(r, l) {
+  const open = UI.open[r].has(l.id);
+  const parties = l.parties.length > 1 ? l.parties.map(p => p.sigla).join(' · ') : `${l.candidates.length} candidatos`;
+  return `<div class="folder ${open ? 'open' : ''}" data-list="${l.id}">
+    <button class="fhead" data-toggle="${l.id}" aria-expanded="${open}">${CHEV}<i class="sw" style="background:${COLORS[l.id] || '#888'}"></i>
+      <span class="fname"><b>${esc(l.short)}</b><small>${esc(parties)}</small></span>
+      <span class="ftot" data-ftot="${l.id}"></span><span class="seatb" data-fseat="${l.id}">0</span></button>
+    ${open ? `<div class="fbody">${folderBody(r, l)}</div>` : ''}
+  </div>`;
+}
+function folderBody(r, l) {
+  const li = S[r].lists[l.id] || {}; const u = S.units[r];
+  const tSet = li.T != null;
+  const cands = l.candidates.slice();
+  const c = CACHE[r];
+  if (UI.sort[r] === 'votes' && c) { const bl = c.byId[l.id]; const vv = {}; bl.cands.forEach(x => vv[x.key] = x.votes); cands.sort((a, b) => (vv[b.n] - vv[a.n]) || a.name.localeCompare(b.name)); }
+  return `<div class="lines">
+      <div class="line"><label for="T-${l.id}">Total da lista<small>opcional · ${l.parties.length > 1 ? 'soma da federação' : 'votos do partido'}</small></label><input class="num" id="T-${l.id}" data-k="T" data-list="${l.id}" inputmode="decimal" value="${showField(li.T, u)}" placeholder="—"></div>
+      <div class="line"><label for="L-${l.id}">Legenda<small>voto só no número do partido</small></label><input class="num" id="L-${l.id}" data-k="L" data-list="${l.id}" inputmode="decimal" value="${showField(li.L, u)}" placeholder="0"></div>
+      <div class="line"><label for="O-${l.id}">Outros candidatos<small>dividido igualmente entre os em branco</small></label><input class="num" id="O-${l.id}" data-k="O" data-list="${l.id}" inputmode="decimal" value="${tSet ? '' : showField(li.O, u)}" ${tSet ? 'readonly tabindex="-1"' : ''} placeholder="0"></div>
+      <div class="warnline" data-fwarn="${l.id}" hidden></div>
+    </div>
+    <div class="cands">${cands.map(c => candRow(r, c, l, true)).join('')}</div>`;
+}
+function candRow(r, c, l, inFolder) {
+  const u = S.units[r]; const v = S[r].c[c.n];
+  const sub = inFolder ? (l.parties.length > 1 ? c.p : '') : l.short + (l.parties.length > 1 ? ' · ' + c.p : '');
+  return `<div class="cand" data-crow="${c.n}"><span class="n">${c.n}</span><span class="nm"><b>${esc(c.name)}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</span>
+    <input class="num" data-k="c" data-key="${c.n}" data-list="${l.id}" inputmode="decimal" value="${showField(v, u)}" aria-label="Votos de ${esc(c.name)}"><span class="st" data-cst="${c.n}"></span></div>`;
+}
+function updateAssign() {
+  const r = UI.race; const c = CACHE[r]; const el = $('#assign'); if (!el) return;
+  const share = c.base > 0 ? Math.min(1, c.sum / c.base) : 0;
+  el.innerHTML = `<div class="row" style="justify-content:space-between"><span class="note">Atribuído <b style="color:var(--ink)">${fmt(c.sum)}</b> de ${fmt(c.base)} válidos</span><span class="note">${pct(share * 100, 1)}</span></div>
+    <div class="bar">${RACES.find(x => x.id === r).kind === 'prop' ? DATA.races[r].lists.map(l => { const v = c.byId[l.id].votes; return v > 0 ? `<i style="width:${v / Math.max(c.base, c.sum) * 100}%;background:${COLORS[l.id]}"></i>` : ''; }).join('') : ''}</div>
+    ${c.over ? `<div class="note warn">Os votos somam mais que os válidos estimados; usando a soma (${fmt(c.sum)}) como votos válidos.</div>` : ''}`;
+}
+function updateFoldersDerived() {
+  const r = UI.race; const c = CACHE[r]; const u = S.units[r];
+  for (const l of DATA.races[r].lists) {
+    const b = c.byId[l.id]; const seats = c.res.lists[l.id]?.seats || 0;
+    const tot = $(`[data-ftot="${l.id}"]`); if (tot) tot.innerHTML = b.votes > 0 ? `${fmt(b.votes)}<small>${pct(b.votes / c.valid * 100)}</small>` : '<small>sem votos</small>';
+    const sb = $(`[data-fseat="${l.id}"]`); if (sb) { sb.textContent = seats; sb.classList.toggle('on', seats > 0); sb.title = seats + (seats === 1 ? ' cadeira' : ' cadeiras'); }
+    const w = $(`[data-fwarn="${l.id}"]`);
+    if (w) { w.hidden = !b.warn && !(b.orphan > 0); w.textContent = b.warn === 'over' ? 'Candidatos + legenda passam do total da lista; usando a soma.' : b.orphan > 0 ? 'Todos os candidatos têm votos; “outros” conta só para a lista.' : ''; }
+    const liT = (S[r].lists[l.id] || {}).T;
+    const o = document.getElementById('O-' + l.id);
+    if (o && liT != null && document.activeElement !== o) o.value = u === '%' ? showField(b.outros / c.base * 100, '%') : fmt(b.outros);
+  }
+  updateRowsDerived();
+}
+function updateRowsDerived() {
+  const r = UI.race; const c = CACHE[r]; const u = S.units[r];
+  const auto = {};
+  for (const l of c.built) for (const x of l.cands) if (x.auto) auto[x.key] = x.votes;
+  for (const inp of $$('#ibody input[data-k="c"]')) {
+    const k = +inp.dataset.key;
+    inp.placeholder = auto[k] != null ? (u === '%' ? showField(auto[k] / c.base * 100, '%') : fmt(auto[k])) : '';
+  }
+  for (const st of $$('#ibody [data-cst]')) {
+    const e = c.status[+st.dataset.cst];
+    st.className = 'st' + (e ? ' e' : ''); st.textContent = e ? 'E' : '';
+    st.title = e ? 'Eleito · ' + howLabel(e.how) : '';
+  }
+}
+function howLabel(h) { return { qp:'quociente partidário', s2:'sobra (fase 2)', s3:'sobra (fase 3, aberta)', art111:'mais votados (art. 111)' }[h] || h; }
+
+// ----- proportional results -----
+function renderPropResults() {
+  const r = UI.race; const c = CACHE[r]; const res = c.res; const seats = DATA.races[r].seats;
+  const el = $('#results');
+  const chips = `<div class="chips">
+    <div class="chip"><span>Votos válidos</span><b>${fmt(c.valid)}</b></div>
+    <div class="chip"><span>Quociente eleitoral</span><b>${fmt(res.QE)}</b></div>
+    <div class="chip"><span>Mín. individual 10%</span><b>${fmt(Math.ceil(res.t10))}</b></div>
+    <div class="chip"><span>Sobras: lista 80%</span><b>${fmt(Math.ceil(res.t80))}</b></div>
+    <div class="chip"><span>Sobras: cand. 20%</span><b>${fmt(Math.ceil(res.t20))}</b></div></div>`;
+  if (!c.any) {
+    el.innerHTML = `<div class="panel wide"><h3>Cadeiras por lista <small>${seats} vagas</small></h3>${chips}${hemi(r, [], seats)}
+      <div class="msg">Preencha os votos das listas à esquerda. Cada lista precisa de ${fmt(res.QE)} votos para garantir uma cadeira pelo quociente; as sobras vão para as maiores médias.</div></div>`;
+    return;
+  }
+  // seats table
+  const rows = Object.values(res.lists).filter(l => l.votes > 0).sort((a, b) => b.seats - a.seats || b.votes - a.votes);
+  const next = {};
+  const bl = c.built.filter(l => l.votes > 0);
+  for (const l of rows) next[l.id] = Engine.votesForNextSeat(bl, l.id, c.valid, seats);
+  const tbl = `<div class="tbl-wrap"><table><thead><tr><th class="l">Lista</th><th>Votos</th><th>%</th><th title="Cadeiras pelo quociente partidário">QP</th><th title="Cadeiras nas sobras">Sobras</th><th>Total</th><th title="Votos a mais (na legenda) para ganhar mais uma cadeira, com as demais listas fixas">+1 cadeira</th></tr></thead><tbody>
+    ${rows.map(l => { const L = LISTS[r][l.id]; return `<tr><td class="l"><i class="dot" style="background:${COLORS[l.id]}"></i>${esc(L.short)}</td><td>${fmt(l.votes)}</td><td>${pct(l.votes / c.valid * 100)}</td><td>${l.s1}${l.qp > l.s1 ? `<span class="note" title="QP ${l.qp}, mas só ${l.s1} candidato(s) com 10% do QE"> /${l.qp}</span>` : ''}</td><td>${l.s2 + l.s3}</td><td><b>${l.seats}</b></td><td>${next[l.id] != null ? fmt(next[l.id]) : '—'}</td></tr>`; }).join('')}
+    <tr><td class="l"><b>Total</b></td><td>${fmt(c.sum)}</td><td>${pct(c.sum / c.valid * 100)}</td><td>${rows.reduce((s, l) => s + l.s1, 0)}</td><td>${rows.reduce((s, l) => s + l.s2 + l.s3, 0)}</td><td><b>${res.elected.length}</b></td><td></td></tr>
+    </tbody></table></div>`;
+  const notes = [];
+  if (res.unfilled > 0) notes.push(`${res.unfilled} cadeira${res.unfilled > 1 ? 's' : ''} sem candidato com votos. Preencha mais candidatos ou use “Outros candidatos”.`);
+  if (res.mode === 'art111') notes.push('Nenhuma lista atingiu o quociente eleitoral: as vagas vão para os candidatos mais votados (art. 111).');
+  if (c.base > c.sum && c.sum > 0) notes.push(`${fmt(c.base - c.sum)} votos válidos ainda não atribuídos a nenhuma lista. Eles contam para o quociente, mas não elegem ninguém.`);
+  for (const t of res.ties) notes.push(t.kind === 'avg' ? `Empate de médias na rodada ${t.round} entre ${t.lists.map(id => LISTS[r][id].short).join(' e ')}: vence a lista com mais votos.` : `Empate entre ${t.names.join(' e ')} na lista ${LISTS[r][t.list].short}: a lei escolhe o mais velho; aqui a ordem é alfabética.`);
+
+  // ranking
+  const eIdx = res.elected.slice().sort((a, b) => b.votes - a.votes || a.name.localeCompare(b.name));
+  const minE = eIdx.length ? eIdx[eIdx.length - 1].votes : Infinity;
+  const non = [];
+  for (const l of c.built) for (const x of l.cands) if (x.votes > 0 && !c.status[x.key]) non.push({ key: x.key, name: x.name, list: l.id, votes: x.votes, auto: x.auto });
+  non.sort((a, b) => b.votes - a.votes || a.name.localeCompare(b.name));
+  const nShow = UI.rankMore[r];
+  const flagged = non.filter(x => x.votes > minE).length;
+  const rrow = (x, i, el) => { const L = LISTS[r][x.list]; const fl = !el && x.votes > minE;
+    return `<tr class="${fl ? 'flag' : ''}"><td>${i}</td><td class="l nmc ${x.auto ? 'auto' : ''}" title="${esc(x.name)}${x.auto ? ' · votos do rateio de “outros”' : ''}">${esc(x.name)}</td><td class="l"><i class="dot" style="background:${COLORS[x.list]}"></i>${esc(shortName(r, x.list))}</td><td class="${x.auto ? 'auto' : ''}">${fmt(x.votes)}</td><td class="l">${el ? `<span class="tag ${x.how === 'qp' ? 'qp' : x.how === 's3' ? 's3' : 's2'}">${x.how === 'qp' ? 'QP' : x.how === 's2' ? 'Sobra' : x.how === 's3' ? 'Sobra 3' : 'Art.111'}</span>` : (fl ? '<span class="tag s3">Mais votos</span>' : '')}</td></tr>`; };
+  const rank = `<div class="tbl-wrap"><table><thead><tr><th>#</th><th class="l">Candidato</th><th class="l">Lista</th><th>Votos</th><th class="l">Via</th></tr></thead><tbody>
+    ${eIdx.map((x, i) => rrow(x, i + 1, true)).join('')}
+    ${non.length ? `<tr class="div"><td colspan="5"></td></tr>` + non.slice(0, nShow).map((x, i) => rrow(x, eIdx.length + i + 1, false)).join('') : ''}
+    </tbody></table></div>
+    ${non.length > nShow ? `<button class="btn small more" data-act="more">Mostrar mais 25 (${non.length - nShow} restantes)</button>` : ''}`;
+  const rankNote = `<div class="legend-note"><span><span class="tag qp">QP</span> quociente</span><span><span class="tag s2">Sobra</span> fase 2</span><span><span class="tag s3">Sobra 3</span> fase aberta</span><span class="auto">itálico = votos do rateio</span></div>
+    ${flagged ? `<div class="alert">${flagged} não eleito${flagged > 1 ? 's têm' : ' tem'} mais votos que o último eleito (${fmt(minE)}).</div>` : ''}`;
+
+  // sobras
+  const sob = res.rounds.length ? `<div class="tbl-wrap"><table><thead><tr><th>Rod.</th><th class="l">Fase</th><th class="l">Vencedor · média</th><th class="l">2ª maior média</th></tr></thead><tbody>
+    ${res.rounds.map(x => { const w = x.avgs[0], s = x.avgs[1]; return `<tr><td>${x.round}</td><td class="l"><span class="tag ${x.phase === 2 ? 's2' : 's3'}">${x.phase === 2 ? '80/20' : 'Aberta'}</span></td><td class="l"><i class="dot" style="background:${COLORS[w.id]}"></i><b>${esc(shortName(r, w.id))}</b><span class="sub2">${fmt(w.avg)}</span></td><td class="l">${s ? `<i class="dot" style="background:${COLORS[s.id]}"></i>${esc(shortName(r, s.id))}<span class="sub2">${fmt(s.avg)}</span>` : '—'}</td></tr>`; }).join('')}
+    </tbody></table></div>` : '<div class="msg">Todas as cadeiras foram preenchidas pelo quociente partidário.</div>';
+  const inPhase1 = res.elected.filter(e => e.how === 'qp').length;
+
+  el.innerHTML = `
+    <div class="panel wide"><h3>Cadeiras por lista <small>${res.elected.length} de ${seats} preenchidas</small></h3>${chips}
+      <div class="seatgrid">${hemi(r, rows, seats)}${tbl}</div>
+      ${notes.length ? `<div class="warnlist">${notes.slice(0, 3).map(n => `<div class="note warn">${esc(n)}</div>`).join('')}${notes.length > 3 ? `<details><summary>Mais ${notes.length - 3} avisos</summary><div class="warnlist" style="margin-top:4px">${notes.slice(3).map(n => `<div class="note warn">${esc(n)}</div>`).join('')}</div></details>` : ''}</div>` : ''}</div>
+    <div class="panel"><h3>Ranking <small>${eIdx.length} eleitos, depois os mais votados</small></h3>${rankNote}${rank}</div>
+    <div class="panel"><h3>Sobras <small>${inPhase1} pelo quociente · ${res.rounds.length} nas sobras</small></h3>
+      <div class="note">Média = votos da lista ÷ (cadeiras já obtidas + 1). A maior média leva a cadeira; repete-se até acabar.</div>${sob}</div>`;
+}
+function shortName(r, id) { return LISTS[r][id].short.replace(/ \(.*\)$/, ''); }
+function hemi(r, rows, seats) {
+  const W = 520, H = 280, cx = W / 2, cy = H - 14;
+  const nRows = seats <= 50 ? 4 : 5; const R0 = 108, R1 = 244;
+  const radii = Array.from({ length: nRows }, (_, i) => R0 + (R1 - R0) * i / (nRows - 1));
+  const tot = radii.reduce((s, x) => s + x, 0);
+  const per = radii.map(x => Math.round(seats * x / tot));
+  let diff = seats - per.reduce((s, x) => s + x, 0); per[nRows - 1] += diff;
+  const pts = [];
+  radii.forEach((rad, i) => { const n = per[i]; for (let j = 0; j < n; j++) { const a = Math.PI - (n === 1 ? Math.PI / 2 : Math.PI * j / (n - 1)); pts.push({ a, x: cx + rad * Math.cos(a), y: cy - rad * Math.sin(a) }); } });
+  pts.sort((p, q) => q.a - p.a);
+  const colors = [];
+  for (const l of rows) for (let k = 0; k < l.seats; k++) colors.push(COLORS[l.id]);
+  const rad = seats <= 50 ? 11 : 9;
+  const filled = colors.length;
+  return `<svg class="hemi" viewBox="0 0 ${W} ${H}" role="img" aria-label="Hemiciclo com ${seats} cadeiras">
+    ${pts.map((p, i) => `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${rad}" fill="${colors[i] || 'var(--line-2)'}" stroke="${colors[i] ? 'none' : 'var(--line)'}"/>`).join('')}
+    <text x="${cx}" y="${cy - 30}" text-anchor="middle" font-family="Archivo, sans-serif" font-weight="800" font-size="44" fill="var(--ink)">${filled}</text>
+    <text x="${cx}" y="${cy - 8}" text-anchor="middle" font-family="Archivo, sans-serif" font-size="13" fill="var(--muted)">de ${seats} cadeiras</text></svg>`;
+}
+
+// ----- majoritarian inputs/results -----
+function renderMajInputs() {
+  const r = UI.race; const u = S.units[r]; const el = $('#inputs');
+  el.innerHTML = `<div class="inputs-head">
+      <div class="row" style="justify-content:space-between"><div class="seg" role="group" aria-label="Unidade"><button data-unit="%" aria-pressed="${u === '%'}">% válidos</button><button data-unit="v" aria-pressed="${u === 'v'}">Votos</button></div>
+      <span class="note">${r === 'sen' ? 'Como o TSE: % de todos os votos válidos para o Senado (soma 100%)' : '% dos votos válidos'}</span></div>
+      <div class="assign" id="assign"></div></div>
+    <div class="inputs-body" id="ibody"><div class="hitlist"><div class="cands">
+      ${DATA.races[r].candidates.map(c => `<div class="cand" data-crow="${c.n}"><span class="n">${c.n}</span><span class="nm"><b>${esc(c.name)}</b><small>${esc(c.p)}${c.coal ? ' · ' + esc(c.coal) : ''}</small></span>
+        <input class="num" data-k="m" data-key="${c.n}" inputmode="decimal" value="${showField(S[r].c[c.n], u)}" aria-label="${u === '%' ? '%' : 'Votos'} de ${esc(c.name)}"><span class="st" data-cst="${c.n}"></span></div>`).join('')}
+    </div></div></div>
+    <div class="inputs-head" style="border-top:1px solid var(--line);border-bottom:0"><div class="row" style="justify-content:flex-end">
+      ${UI.confirmClear ? `<span class="row"><span class="note">Apagar todos os votos desta corrida?</span><button class="btn small danger" data-act="clearOk">Apagar</button><button class="btn small ghost" data-act="clearNo">Cancelar</button></span>` : `<button class="btn ghost small danger" data-act="clear">Limpar corrida</button>`}</div></div>`;
+  updateMajAssign();
+}
+function updateMajAssign() {
+  const r = UI.race; const c = CACHE[r]; const el = $('#assign'); if (!el) return;
+  const share = c.base > 0 ? c.sum / c.base * 100 : 0;
+  el.innerHTML = `<div class="row" style="justify-content:space-between"><span class="note">Atribuído <b style="color:var(--ink)">${pct(share, 1)}</b> · ${fmt(c.sum)} de ${fmt(c.base)} válidos</span><span class="note">${share < 100 ? 'Não atribuído ' + pct(100 - share, 1) : ''}</span></div>
+    <div class="bar">${c.cands.filter(x => x.votes > 0).map(x => `<i style="width:${x.votes / Math.max(c.base, c.sum) * 100}%;background:${PARTY_COLOR[x.c.p] || '#8A948D'}"></i>`).join('')}</div>
+    ${c.over ? `<div class="note warn">A soma passa de 100% dos válidos; usando a soma como votos válidos.</div>` : ''}`;
+  const win = r === 'sen' ? c.cands.filter(x => x.votes > 0).slice(0, 2).map(x => x.c.n) : [];
+  const gw = r === 'gov' && c.cands[0] && c.cands[0].votes > c.valid / 2 ? c.cands[0].c.n : null;
+  const fin = r === 'gov' ? finalists().map(x => x && x.c.n) : [];
+  for (const st of $$('#ibody [data-cst]')) {
+    const n = +st.dataset.cst; const e = win.includes(n) || gw === n; const f = !gw && fin.includes(n) && c.any;
+    st.className = 'st' + (e ? ' e' : f ? ' s' : ''); st.textContent = e ? 'E' : f ? '2' : '';
+    st.title = e ? 'Eleito' : f ? 'Vai ao 2º turno' : '';
+  }
+  for (const inp of $$('#ibody input[data-k="m"]')) {
+    const n = +inp.dataset.key; const x = c.cands.find(y => y.c.n === n);
+    inp.title = x && x.votes ? `${fmt(x.votes)} votos · ${pct(x.votes / c.valid * 100)}` : '';
+  }
+}
+function finalists() {
+  const c = CACHE.gov || computeMaj('gov');
+  const top = c.cands.filter(x => x.votes > 0);
+  const pick = n => c.cands.find(x => x.c.n === n);
+  let a = S.runoff.a != null ? pick(S.runoff.a) : null, b = S.runoff.b != null ? pick(S.runoff.b) : null;
+  if (!a) a = top[0] || null; if (!b || (a && b.c.n === a.c.n)) b = top.find(x => !a || x.c.n !== a.c.n) || null;
+  return [a, b];
+}
+function renderMajResults() {
+  const r = UI.race; const c = CACHE[r]; const el = $('#results');
+  const max = Math.max(...c.cands.map(x => x.votes), 1);
+  const scale = r === 'sen' ? Math.max(max, c.valid * 0.3) : Math.max(max, c.valid * 0.55);
+  if (!c.any) { el.innerHTML = `<div class="panel wide"><h3>${r === 'sen' ? 'Senado' : 'Governador'} <small>${fmt(c.valid)} votos válidos</small></h3><div class="msg">Preencha o % de cada candidato à esquerda. ${r === 'sen' ? 'Os dois mais votados são eleitos. No método do TSE, os percentuais de todos os candidatos somam 100%, e cada eleitor dá dois votos.' : 'Quem passar de 50% dos votos válidos vence no 1º turno; senão, os dois primeiros vão ao 2º turno.'}</div></div>`; return; }
+  const winners = r === 'sen' ? c.cands.filter(x => x.votes > 0).slice(0, 2) : [];
+  const govWin = r === 'gov' && c.cands[0].votes > c.valid / 2;
+  const bars = c.cands.map((x, i) => {
+    const p = x.votes / c.valid * 100; const w = x.votes / scale * 100;
+    const win = winners.includes(x) || (govWin && i === 0);
+    return `<div class="mbar ${win ? 'win' : ''}"><div class="who"><b>${esc(x.c.name)}</b><small>${x.c.n} · ${esc(x.c.p)}</small></div>
+      <div class="track"><i style="width:${w}%;background:${PARTY_COLOR[x.c.p] || '#8A948D'}"></i>${r === 'gov' ? `<span class="thr" style="left:${50 * c.valid / 100 / scale * 100}%" title="50% dos válidos"></span>` : ''}</div>
+      <div class="val"><b>${pct(p)}</b><small>${fmt(x.votes)}</small></div></div>`;
+  }).join('');
+  const t = turnout();
+  let head = '', extra = '';
+  if (r === 'sen') {
+    const [a, b] = winners; const third = c.cands.filter(x => x.votes > 0)[2];
+    head = `<div class="verdict ok">Eleitos: ${winners.map(x => esc(x.c.name)).join(' e ')}</div>
+      ${third && b ? `<div class="note">Vantagem do 2º sobre o 3º (${esc(third.c.name)}): <b style="color:var(--ink)">${fmt(b.votes - third.votes)}</b> votos (${pct((b.votes - third.votes) / c.valid * 100)}).</div>` : ''}`;
+    const tooMany = c.cands.filter(x => x.votes > t);
+    if (tooMany.length) extra = `<div class="alert">${tooMany.map(x => esc(x.c.name)).join(', ')} tem mais votos que eleitores presentes (${fmt(t)}). Cada eleitor só pode votar uma vez em cada candidato.</div>`;
+    extra += `<div class="note">Referência: ${pct(25, 0)} no Senado ≈ ${pct(25 * 2 * (1 - (S.rates.sen.blank + S.rates.sen.null) / 100), 0)} dos eleitores que compareceram escolheram o candidato como um dos dois votos.</div>`;
+  } else {
+    const lead = c.cands[0];
+    head = govWin ? `<div class="verdict ok">${esc(lead.c.name)} eleito no 1º turno com ${pct(lead.votes / c.valid * 100)}</div>`
+      : `<div class="verdict run">2º turno: ninguém passou de 50% dos válidos</div><div class="note">Faltaram ${fmt(Math.floor(c.valid / 2) + 1 - lead.votes)} votos para ${esc(lead.c.name)} vencer no 1º turno.</div>`;
+  }
+  el.innerHTML = `<div class="panel wide"><h3>${r === 'sen' ? 'Senado' : 'Governador · 1º turno'} <small>${fmt(c.valid)} votos válidos${r === 'sen' ? ' (dois por eleitor)' : ''}</small></h3>${head}<div class="mbars">${bars}</div>${extra}</div>
+    ${r === 'gov' && !govWin ? runoffHTML() : ''}`;
+}
+function runoffHTML() {
+  const c = CACHE.gov; const [A, B] = finalists(); if (!A || !B) return '';
+  const R = S.runoff;
+  const abst2 = R.abst ?? S.abst, blank2 = R.blank ?? S.rates.gov.blank, null2 = R.null ?? S.rates.gov.null;
+  const opts = sel => c.cands.map(x => `<option value="${x.c.n}" ${x.c.n === sel.c.n ? 'selected' : ''}>${esc(x.c.name)} (${esc(x.c.p)})</option>`).join('');
+  let vA, vB, body;
+  if (R.mode === 'direct') {
+    const valid2 = S.electorate * (1 - abst2 / 100) * (1 - (blank2 + null2) / 100);
+    const pA = R.pctA ?? 50; vA = valid2 * pA / 100; vB = valid2 - vA;
+    body = `<div class="runoff-grid">
+      <div class="kv"><label for="roA">% de ${esc(A.c.name)}</label><input class="field num" id="roA" data-ro="pctA" value="${showField(R.pctA ?? 50, '%')}" inputmode="decimal"></div>
+      <div class="kv"><label>% de ${esc(B.c.name)}</label><div class="field" style="text-align:right;border-style:dashed;color:var(--muted)">${showField(100 - (R.pctA ?? 50), '%')}</div></div>
+      <div class="kv"><label for="roAb">Abstenção % (2º turno)</label><input class="field num" id="roAb" data-ro="abst" value="${showField(abst2, '%')}" inputmode="decimal"></div>
+      <div class="kv"><label for="roBl">Brancos + nulos % (2º turno)</label><input class="field num" id="roBl" data-ro="bn" value="${showField(blank2 + null2, '%')}" inputmode="decimal"></div></div>`;
+  } else {
+    vA = A.votes; vB = B.votes;
+    const others = c.cands.filter(x => x !== A && x !== B && x.votes > 0);
+    const un = Math.max(0, c.valid - c.sum);
+    const rows = others.map(x => { const t = R.tr[x.c.n] || {}; const a = t.a ?? 0, b = t.b ?? 0; vA += x.votes * a / 100; vB += x.votes * b / 100;
+      return `<div class="tr"><span><b>${esc(x.c.name)}</b> <span class="note">${fmt(x.votes)}</span></span><input class="num" data-tr="a" data-key="${x.c.n}" value="${showField(t.a, '%')}" placeholder="0" inputmode="decimal" aria-label="% para ${esc(A.c.name)}"><input class="num" data-tr="b" data-key="${x.c.n}" value="${showField(t.b, '%')}" placeholder="0" inputmode="decimal" aria-label="% para ${esc(B.c.name)}"><span class="note" style="text-align:right">${pct(Math.max(0, 100 - a - b), 0)}</span></div>`; }).join('');
+    const tu = R.tr.un || {}; if (un > 0) { vA += un * (tu.a ?? 0) / 100; vB += un * (tu.b ?? 0) / 100; }
+    body = `<div class="note">Cada finalista mantém os próprios eleitores. Para os demais, diga que % dos eleitores vai para cada lado; o resto vira branco, nulo ou abstenção.</div>
+      <div><div class="tr h"><span>Eleitores de</span><span>→ ${esc(A.c.name.split(' ')[0])}</span><span>→ ${esc(B.c.name.split(' ')[0])}</span><span style="text-align:right">Perdidos</span></div>${rows}
+      ${un > 0 ? `<div class="tr"><span><b>Não atribuídos</b> <span class="note">${fmt(un)}</span></span><input class="num" data-tr="a" data-key="un" value="${showField(tu.a, '%')}" placeholder="0" inputmode="decimal" aria-label="% dos não atribuídos para ${esc(A.c.name)}"><input class="num" data-tr="b" data-key="un" value="${showField(tu.b, '%')}" placeholder="0" inputmode="decimal" aria-label="% dos não atribuídos para ${esc(B.c.name)}"><span class="note" style="text-align:right">${pct(Math.max(0, 100 - (tu.a ?? 0) - (tu.b ?? 0)), 0)}</span></div>` : ''}</div>`;
+  }
+  const tot = vA + vB; const pA = tot ? vA / tot * 100 : 0; const pB = tot ? 100 - pA : 0;
+  const winner = vA === vB ? null : vA > vB ? A : B;
+  return `<div class="panel wide"><h3>Simulador de 2º turno <small>25 de outubro</small></h3>
+    <div class="selrow"><select class="field" id="roSelA" aria-label="Finalista A">${opts(A)}</select><span class="note">×</span><select class="field" id="roSelB" aria-label="Finalista B">${opts(B)}</select>
+      <div class="seg" role="group" aria-label="Modo" style="margin-left:auto"><button data-romode="direct" aria-pressed="${R.mode === 'direct'}">Direto</button><button data-romode="transfer" aria-pressed="${R.mode === 'transfer'}">Transferência</button></div></div>
+    ${body}
+    <div class="verdict ${winner ? 'ok' : 'run'}">${winner ? esc(winner.c.name) + ' vence o 2º turno' : 'Empate'}</div>
+    <div class="mbars">${[[A, vA, pA], [B, vB, pB]].map(([x, v, p]) => `<div class="mbar ${winner === x ? 'win' : ''}"><div class="who"><b>${esc(x.c.name)}</b><small>${esc(x.c.p)}</small></div><div class="track"><i style="width:${p}%;background:${PARTY_COLOR[x.c.p] || '#8A948D'}"></i><span class="thr" style="left:50%"></span></div><div class="val"><b>${pct(p)}</b><small>${fmt(v)}</small></div></div>`).join('')}</div></div>`;
+}
+
+// ---------------- events ----------------
+let recalcT;
+function scheduleRecalc() {
+  clearTimeout(recalcT);
+  recalcT = setTimeout(() => {
+    const r = UI.race; compute(r);
+    const $vb = $('#vbOut'); if ($vb) $vb.textContent = fmt(validBase(r));
+    if (RACES.find(x => x.id === r).kind === 'prop') { updateAssign(); updateFoldersDerived(); renderPropResults(); }
+    else { updateMajAssign(); renderMajResults(); }
+  }, 140);
+}
+document.addEventListener('input', e => {
+  const t = e.target;
+  const r = UI.race; const u = S.units[r];
+  if (t.id === 'q') { UI.q[r] = t.value; renderPropBody(); return; }
+  if (t.dataset.g) {
+    const g = t.dataset.g;
+    if (g === 'electorate') { const v = parseField(t.value, 'v'); if (v != null) S.electorate = v; }
+    else if (g === 'abst') { const v = parsePctLoose(t.value); if (v != null) S.abst = v; }
+    else { const v = parsePctLoose(t.value); if (v != null) S.rates[r][g] = v; }
+    const tt = $('.strip .calc b'); if (tt) tt.textContent = fmt(turnout());
+    touch(); scheduleRecalc(); return;
+  }
+  if (t.dataset.k) {
+    const k = t.dataset.k; const v = parseField(t.value, u);
+    if (k === 'c' || k === 'm') { if (v == null) delete S[r].c[t.dataset.key]; else S[r].c[t.dataset.key] = v; }
+    else { const li = S[r].lists[t.dataset.list] || (S[r].lists[t.dataset.list] = {}); if (v == null) delete li[k]; else li[k] = v;
+      if (k === 'T') { const o = document.getElementById('O-' + t.dataset.list); if (o) { o.readOnly = v != null; o.tabIndex = v != null ? -1 : 0; if (v == null) o.value = showField(li.O, u); } } }
+    touch(); scheduleRecalc(); return;
+  }
+  if (t.dataset.ro) {
+    const v = parsePctLoose(t.value); const R = S.runoff;
+    if (t.dataset.ro === 'bn') { if (v != null) { R.blank = v / 2; R.null = v / 2; } } else if (v != null) R[t.dataset.ro] = v;
+    touch(); clearTimeout(recalcT); recalcT = setTimeout(() => refreshRunoff(), 300); return;
+  }
+  if (t.dataset.tr) {
+    const v = parsePctLoose(t.value); const k = t.dataset.key; const R = S.runoff; const o = R.tr[k] || (R.tr[k] = {});
+    if (v == null) delete o[t.dataset.tr]; else o[t.dataset.tr] = v;
+    touch(); clearTimeout(recalcT); recalcT = setTimeout(() => refreshRunoff(), 400); return;
+  }
+});
+function refreshRunoff() {
+  const a = document.activeElement; const id = a && (a.id || (a.dataset.tr ? 'tr-' + a.dataset.tr + '-' + a.dataset.key : ''));
+  const pos = a && a.selectionStart;
+  renderMajResults();
+  let el = id ? (id.startsWith('tr-') ? $(`[data-tr="${id.split('-')[1]}"][data-key="${id.split('-')[2]}"]`) : document.getElementById(id)) : null;
+  if (el) { el.focus(); try { el.setSelectionRange(pos, pos); } catch (e) {} }
+}
+document.addEventListener('change', e => {
+  const t = e.target; const r = UI.race;
+  if (t.dataset.k) { const k = t.dataset.k; const v = k === 'c' || k === 'm' ? S[r].c[t.dataset.key] : (S[r].lists[t.dataset.list] || {})[k]; t.value = showField(v, S.units[r]); }
+  if (t.dataset.g) renderStrip();
+  if (t.id === 'roSelA' || t.id === 'roSelB') { S.runoff[t.id === 'roSelA' ? 'a' : 'b'] = +t.value; touch(); renderMajResults(); }
+});
+document.addEventListener('click', async e => {
+  const b = e.target.closest('button'); if (!b) { if (UI.pop && !e.target.closest('#pop')) { UI.pop = false; renderScen(); } return; }
+  const r = UI.race;
+  if (UI.pop && !b.closest('#pop') && b.id !== 'bVers') { UI.pop = false; renderScen(); }
+  if (b.dataset.race) { UI.race = b.dataset.race; UI.confirmClear = false; try { history.replaceState(null, '', '#' + RACES.find(x => x.id === UI.race).hash); } catch (err) {} saveDraft(); renderTabs(); renderStrip(); renderRace(); return; }
+  if (b.dataset.toggle) { const id = b.dataset.toggle; const s = UI.open[r]; s.has(id) ? s.delete(id) : s.add(id); const f = b.closest('.folder'); f.outerHTML = folderHTML(r, LISTS[r][id]); updateFoldersDerived(); const nb = $(`[data-toggle="${id}"]`); if (nb) nb.focus(); return; }
+  if (b.dataset.unit) { switchUnit(r, b.dataset.unit); return; }
+  if (b.dataset.sort) { UI.sort[r] = b.dataset.sort; renderPropInputs(); return; }
+  if (b.dataset.romode) { S.runoff.mode = b.dataset.romode; touch(); renderMajResults(); return; }
+  if (b.id === 'bSave') { await saveScenario(false); return; }
+  if (b.id === 'bVers') { UI.pop = !UI.pop; UI.confirmDel = null; UI.renaming = null; if (UI.pop) await refreshList(); renderScen(); return; }
+  if (b.id === 'bCsv') { exportCsv(); return; }
+  if (b.id === 'bReset') { S.abst = DEF.abst; for (const k of ['gov','sen','fed','est']) S.rates[k] = Object.assign({}, DEF[k]); S.runoff.abst = S.runoff.blank = S.runoff.null = null; touch(); renderStrip(); scheduleRecalc(); toast('Abstenção, brancos e nulos voltaram aos níveis de 2022'); return; }
+  const act = b.dataset.act; if (!act) return;
+  if (act === 'more') { UI.rankMore[r] += 25; renderPropResults(); return; }
+  if (act === 'collapseAll') { UI.open[r].clear(); renderPropBody(); return; }
+  if (act === 'clear') { UI.confirmClear = true; renderRace(); return; }
+  if (act === 'clearNo') { UI.confirmClear = false; renderRace(); return; }
+  if (act === 'clearOk') { UI.confirmClear = false; S[r] = r === 'fed' || r === 'est' ? { lists:{}, c:{} } : { c:{} }; if (r === 'gov') S.runoff = blankState().runoff; touch(); renderRace(); toast('Votos apagados'); return; }
+  if (act === 'saveAs') { await saveScenario(true, $('#saveAsName').value); UI.pop = false; renderScen(); return; }
+  if (act === 'new') { S = blankState(); scen = { id:null, name:'Sem título', dirty:false }; UI.pop = false; saveDraft(); renderAll(); toast('Novo cenário em branco'); return; }
+  if (act === 'open') { const x = await storeGet(b.dataset.id); if (x) { S = mergeState(x.state); scen = { id:b.dataset.id, name:x.name, dirty:false }; UI.pop = false; saveDraft(); renderAll(); toast('Aberto: ' + x.name); } return; }
+  if (act === 'dup') { const x = await storeGet(b.dataset.id); if (x) { const id = 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); await storePut(id, { name: x.name + ' (cópia)', updatedAt: Date.now(), state: x.state }); await refreshList(); renderScen(); } return; }
+  if (act === 'rename') { UI.renaming = b.dataset.id; renderScen(); const i = $('#renameIn'); if (i) { i.focus(); i.select(); } return; }
+  if (act === 'renameNo') { UI.renaming = null; renderScen(); return; }
+  if (act === 'renameOk') { const nm = ($('#renameIn').value || '').trim(); const x = await storeGet(b.dataset.id); if (x && nm) { x.name = nm; await storePut(b.dataset.id, x); if (scen.id === b.dataset.id) scen.name = nm; } UI.renaming = null; await refreshList(); renderScen(); return; }
+  if (act === 'del') { UI.confirmDel = b.dataset.id; renderScen(); return; }
+  if (act === 'delNo') { UI.confirmDel = null; renderScen(); return; }
+  if (act === 'delOk') { await storeDel(b.dataset.id); if (scen.id === b.dataset.id) { scen.id = null; scen.dirty = true; } UI.confirmDel = null; await refreshList(); renderScen(); return; }
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && UI.pop) { UI.pop = false; renderScen(); }
+  if (e.key === 'Enter' && e.target.id === 'saveAsName') { e.preventDefault(); $('[data-act="saveAs"]').click(); }
+  if (e.key === 'Enter' && e.target.id === 'renameIn') { e.preventDefault(); $('[data-act="renameOk"]').click(); }
+});
+function switchUnit(r, to) {
+  const from = S.units[r]; if (from === to) return;
+  const base = validBase(r);
+  const conv = v => v == null ? v : (to === '%' ? (base ? +(v / base * 100).toFixed(4) : 0) : Math.round(v / 100 * base));
+  const st = S[r];
+  for (const k of Object.keys(st.c)) st.c[k] = conv(st.c[k]);
+  if (st.lists) for (const li of Object.values(st.lists)) for (const k of ['T','L','O']) if (li[k] != null) li[k] = conv(li[k]);
+  S.units[r] = to; touch(); renderRace();
+}
+async function exportCsv() {
+  const r = UI.race; const c = CACHE[r] || compute(r); const rl = RACES.find(x => x.id === r);
+  const q = s => '"' + String(s).replace(/"/g, '""') + '"';
+  let lines;
+  if (rl.kind === 'prop') {
+    lines = [['numero','candidato','partido','lista','votos','situacao'].join(';')];
+    for (const l of c.built) for (const x of l.cands) { if (!(x.votes > 0)) continue; const e = c.status[x.key]; const cc = CAND[r][x.key];
+      lines.push([x.key, q(x.name), cc.c.p, q(LISTS[r][l.id].short), x.votes, e ? 'Eleito (' + howLabel(e.how) + ')' : 'Não eleito'].join(';')); }
+  } else {
+    lines = [['numero','candidato','partido','votos','pct_validos'].join(';')];
+    for (const x of c.cands) lines.push([x.c.n, q(x.c.name), x.c.p, x.votes, (x.votes / c.valid * 100).toFixed(2).replace('.', ',')].join(';'));
+  }
+  try { await downloads.save({ filename: `simulacao-rj-2026-${rl.hash}.csv`, data: '﻿' + lines.join('\n') }); toast('CSV exportado'); }
+  catch (err) { if (err && err.code !== 'declined') toast('Não foi possível exportar'); }
+}
+
+// ---------------- boot ----------------
+function renderAll() { renderScen(); renderStrip(); renderTabs(); renderRace(); }
+function boot() {
+  loadDraft();
+  const h = (location.hash || '').slice(1); const hr = RACES.find(x => x.hash === h); if (hr) UI.race = hr.id;
+  store = 'local'; refreshList().then(renderScen);
+  renderAll();
+  if (window.claude && window.claude.use) {
+    window.claude.use('db').then(async d => { if (!d) return; db = d; store = 'db'; await refreshList(); renderScen(); }).catch(() => {});
+    window.claude.use('downloads').then(d => { if (d) { downloads = d; renderScen(); } }).catch(() => {});
+  }
+}
+boot();
+})();
+</script>
+
+</body>
+</html>

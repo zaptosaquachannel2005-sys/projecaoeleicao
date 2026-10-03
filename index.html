@@ -146,7 +146,7 @@ a{color:var(--accent)}
 .num::placeholder{color:var(--faint);font-style:italic}
 .warnline{color:var(--warn);font-size:12.5px;font-weight:600}
 .cands{display:grid}
-.cand{display:grid;grid-template-columns:44px 1fr 112px 22px;gap:8px;align-items:center;padding:4px 0;border-top:1px solid var(--line-2)}
+.cand{display:grid;grid-template-columns:44px 1fr 104px 24px 20px;gap:7px;align-items:center;padding:4px 0;border-top:1px solid var(--line-2)}
 .cand:first-child{border-top:0}
 .cand .n{font-family:var(--mono);font-size:12.5px;color:var(--muted)}
 .cand .nm{min-width:0}
@@ -155,11 +155,27 @@ a{color:var(--accent)}
 .st{width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font-size:10px;font-weight:700;font-family:var(--mono)}
 .st.e{background:var(--accent);color:var(--accent-ink)}
 .st.s{border:1.5px solid var(--faint);color:var(--faint)}
+.st.x{background:var(--warn);color:var(--surface)}
+.ann{width:24px;height:24px;display:grid;place-items:center;border:1px solid transparent;border-radius:6px;background:none;color:var(--faint);cursor:pointer;padding:0}
+.ann svg{width:15px;height:15px}
+.ann:hover{color:var(--warn);border-color:var(--line)}
+.ann[aria-pressed="true"]{background:var(--warn-soft);color:var(--warn);border-color:var(--warn)}
+.cand.annul .nm b{text-decoration:line-through;color:var(--muted)}
+.cand.annul .num{color:var(--muted);text-decoration:line-through;background:var(--surface-2)}
+.voidtag{color:var(--warn)!important;font-weight:600!important}
+.chip.void{background:var(--warn-soft);border-color:transparent}
+.chip.void span,.chip.void b{color:var(--warn)}
+.voidbox{background:var(--warn-soft);border-radius:8px;padding:10px 12px;display:grid;gap:4px;font-size:13px}
+.voidbox>b{color:var(--warn);font-size:12px;letter-spacing:.05em;text-transform:uppercase}
+.voidbox .vrow{display:flex;justify-content:space-between;gap:10px}
+.voidbox .note{margin-top:2px}
+.mbar.annul .who b{text-decoration:line-through;color:var(--muted)}
+.mbar.annul .val b{color:var(--warn);font-size:12px;text-transform:uppercase;letter-spacing:.05em}
 .search{position:relative}
 .search .field{width:100%;padding-left:30px}
 .search svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);width:15px;height:15px;color:var(--faint)}
 .hitlist{padding:6px 12px 12px}
-.hitlist .cand{grid-template-columns:44px 1fr 112px 22px}
+.hitlist .cand{grid-template-columns:44px 1fr 104px 24px 20px}
 .empty{padding:22px 14px;color:var(--muted);text-align:center}
 
 /* ---------- results ---------- */
@@ -243,7 +259,7 @@ select.field{padding:5px 8px}
   <div class="strip" id="strip"></div>
   <div class="tabs" role="tablist" id="tabs"></div>
   <div id="view"></div>
-  <p class="foot">Regras: quociente eleitoral com arredondamento do Código Eleitoral (art. 106), quociente partidário e mínimo individual de 10% (arts. 107–108), sobras pela maior média com exigência de 80% para a lista e 20% para o candidato (art. 109) e, se ainda restarem vagas, distribuição aberta a todas as listas conforme decisão do STF de 2024. Federações contam como uma única lista. Votos em branco e nulos não entram nos votos válidos.</p>
+  <p class="foot">Regras: quociente eleitoral com arredondamento do Código Eleitoral (art. 106), quociente partidário e mínimo individual de 10% (arts. 107–108), sobras pela maior média com exigência de 80% para a lista e 20% para o candidato (art. 109) e, se ainda restarem vagas, distribuição aberta a todas as listas conforme decisão do STF de 2024. Federações contam como uma única lista. Votos em branco e nulos não entram nos votos válidos. Votos de candidaturas sub judice marcadas como anuladas contam como nulos: saem do total da lista e dos votos válidos.</p>
 </div>
 <div id="toast" class="toast" hidden></div>
 
@@ -401,7 +417,12 @@ const Engine = (() => {
         for (const b of alpha) { b.votes = each + (r > 0 ? 1 : 0); if (r > 0) r--; b.auto = b.votes > 0; }
       } else orphan = outros;
     }
-    return { id: spec.id, name: spec.name, votes: total, legenda: leg, outros, filled, orphan, warn, cands };
+    // Annulled (sub judice) candidates: their votes, typed or from the split, leave the list and become null votes.
+    // Nobody else's votes change.
+    let voided = 0;
+    if (spec.annulled) for (const c of cands) if (spec.annulled[c.key]) { c.annulled = true; c.raw = c.votes; voided += c.votes; c.votes = 0; }
+    total = Math.max(0, total - voided);
+    return { id: spec.id, name: spec.name, votes: total, legenda: leg, outros, filled, orphan, warn, cands, voided };
   }
   function num(v) { const n = +v; return (v == null || v === '' || !isFinite(n)) ? 0 : Math.max(0, Math.round(n)); }
 
@@ -472,7 +493,7 @@ function blankState() {
     v: 1, electorate: DATA.electorate, abst: DEF.abst,
     rates: JSON.parse(JSON.stringify({ gov: DEF.gov, sen: DEF.sen, fed: DEF.fed, est: DEF.est })),
     units: { fed:'v', est:'v', sen:'%', gov:'%' },
-    fed: { lists:{}, c:{} }, est: { lists:{}, c:{} }, sen: { c:{} }, gov: { c:{} },
+    fed: { lists:{}, c:{}, x:{} }, est: { lists:{}, c:{}, x:{} }, sen: { c:{}, x:{} }, gov: { c:{}, x:{} },
     runoff: { mode:'direct', a:null, b:null, pctA:null, abst:null, blank:null, null:null, tr:{} }
   };
 }
@@ -500,24 +521,26 @@ function computeProp(r) {
     const candVotes = {};
     for (const c of l.candidates) { const v = st.c[c.n]; if (v != null) candVotes[c.n] = toVotes(r, v); }
     return Engine.buildList({ id:l.id, name:l.short, cands:l.candidates.map(c => ({ key:c.n, name:c.name })),
-      total: li.T != null ? toVotes(r, li.T) : null, legenda: toVotes(r, li.L), outros: toVotes(r, li.O), candVotes });
+      total: li.T != null ? toVotes(r, li.T) : null, legenda: toVotes(r, li.L), outros: toVotes(r, li.O), candVotes, annulled: st.x });
   });
   const sum = built.reduce((s, l) => s + l.votes, 0);
-  const valid = Math.max(base, sum);
+  const voided = built.reduce((s, l) => s + l.voided, 0);
+  const valid = Math.max(base, sum + voided) - voided;
   const res = Engine.allocate(built.filter(l => l.votes > 0), { valid, seats: DATA.races[r].seats });
   const status = {};
   for (const e of res.elected) status[e.key] = e;
   const byId = {}; built.forEach(l => byId[l.id] = l);
-  const out = { r, base, sum, valid, over: sum > base + 0.5, built, byId, res, status, any: sum > 0 };
+  const out = { r, base, sum, voided, valid, over: sum + voided > base + 0.5, built, byId, res, status, any: sum > 0 };
   CACHE[r] = out; return out;
 }
 function computeMaj(r) {
   const base = validBase(r);
-  const cands = DATA.races[r].candidates.map(c => ({ c, votes: Math.round(toVotes(r, S[r].c[c.n]) || 0), set: S[r].c[c.n] != null }));
+  const cands = DATA.races[r].candidates.map(c => { const raw = Math.round(toVotes(r, S[r].c[c.n]) || 0); const ann = !!S[r].x[c.n]; return { c, votes: ann ? 0 : raw, raw, ann, set: S[r].c[c.n] != null }; });
   const sum = cands.reduce((s, x) => s + x.votes, 0);
-  const valid = Math.max(base, sum);
-  cands.sort((a, b) => b.votes - a.votes || (a.c.name < b.c.name ? -1 : 1));
-  const out = { r, base, sum, valid, over: sum > base + 0.5, cands, any: sum > 0 };
+  const voided = cands.reduce((s, x) => s + (x.ann ? x.raw : 0), 0);
+  const valid = Math.max(base, sum + voided) - voided;
+  cands.sort((a, b) => (a.ann - b.ann) || b.votes - a.votes || b.raw - a.raw || (a.c.name < b.c.name ? -1 : 1));
+  const out = { r, base, sum, voided, valid, over: sum + voided > base + 0.5, cands, any: sum > 0 || voided > 0 };
   CACHE[r] = out; return out;
 }
 function compute(r) { return RACES.find(x => x.id === r).kind === 'prop' ? computeProp(r) : computeMaj(r); }
@@ -603,13 +626,13 @@ function localSet(o) { try { localStorage.setItem('simrj.scenarios', JSON.string
 let draftT;
 function saveDraft() { clearTimeout(draftT); draftT = setTimeout(() => { try { localStorage.setItem('simrj.draft', JSON.stringify({ S, scen, race: UI.race })); } catch (e) {} }, 300); }
 function loadDraft() { try { const d = JSON.parse(localStorage.getItem('simrj.draft') || 'null'); if (d && d.S && d.S.v === 1) { S = mergeState(d.S); scen = d.scen || scen; if (d.race) UI.race = d.race; } } catch (e) {} }
-function mergeState(x) { const b = blankState(); return Object.assign(b, x, { rates: Object.assign(b.rates, x.rates || {}), units: Object.assign(b.units, x.units || {}), runoff: Object.assign(b.runoff, x.runoff || {}) }); }
+function mergeState(x) { const b = blankState(); const m = Object.assign(b, x, { rates: Object.assign(b.rates, x.rates || {}), units: Object.assign(b.units, x.units || {}), runoff: Object.assign(b.runoff, x.runoff || {}) }); for (const k of ['fed','est','sen','gov']) { m[k] = m[k] || { c:{} }; m[k].c = m[k].c || {}; m[k].x = m[k].x || {}; if (k === 'fed' || k === 'est') m[k].lists = m[k].lists || {}; } return m; }
 function touch() { if (!scen.dirty) { scen.dirty = true; renderScen(); } saveDraft(); }
 
 // ---------------- turnout strip ----------------
 function renderStrip() {
   const r = UI.race; const rt = S.rates[r];
-  const t = turnout(); const vb = validBase(r);
+  const t = turnout(); const cc = compute(r); const vb = cc.valid;
   const rl = RACES.find(x => x.id === r);
   $('#strip').innerHTML = `
     <div class="kv"><label for="inElect">Eleitorado</label><input class="field" id="inElect" data-g="electorate" value="${fmt(S.electorate)}" inputmode="numeric"></div>
@@ -724,20 +747,29 @@ function candRow(r, c, l, inFolder) {
   const u = S.units[r]; const v = S[r].c[c.n];
   const sub = inFolder ? (l.parties.length > 1 ? c.p : '') : l.short + (l.parties.length > 1 ? ' · ' + c.p : '');
   return `<div class="cand" data-crow="${c.n}"><span class="n">${c.n}</span><span class="nm"><b>${esc(c.name)}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</span>
-    <input class="num" data-k="c" data-key="${c.n}" data-list="${l.id}" inputmode="decimal" value="${showField(v, u)}" aria-label="Votos de ${esc(c.name)}"><span class="st" data-cst="${c.n}"></span></div>`;
+    <input class="num" data-k="c" data-key="${c.n}" data-list="${l.id}" inputmode="decimal" value="${showField(v, u)}" aria-label="Votos de ${esc(c.name)}">${annBtn(r, c)}<span class="st" data-cst="${c.n}"></span></div>`;
+}
+const BAN = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="8" cy="8" r="5.6"/><path d="M4.1 4.1l7.8 7.8"/></svg>';
+function annBtn(r, c) {
+  const on = !!S[r].x[c.n];
+  return `<button class="ann" data-ann="${c.n}" aria-pressed="${on}" aria-label="Anular votos de ${esc(c.name)} (candidatura sub judice)" title="${on ? 'Votos anulados: contam como nulos. Clique para validar de novo.' : 'Candidatura sub judice: anular os votos (viram nulos)'}">${BAN}</button>`;
+}
+function voidNote(c) {
+  return c.voided > 0 ? `<div class="note warn">Anulados (sub judice): <b>${fmt(c.voided)}</b> votos contam como nulos e saem dos válidos.</div>` : '';
 }
 function updateAssign() {
   const r = UI.race; const c = CACHE[r]; const el = $('#assign'); if (!el) return;
-  const share = c.base > 0 ? Math.min(1, c.sum / c.base) : 0;
-  el.innerHTML = `<div class="row" style="justify-content:space-between"><span class="note">Atribuído <b style="color:var(--ink)">${fmt(c.sum)}</b> de ${fmt(c.base)} válidos</span><span class="note">${pct(share * 100, 1)}</span></div>
-    <div class="bar">${RACES.find(x => x.id === r).kind === 'prop' ? DATA.races[r].lists.map(l => { const v = c.byId[l.id].votes; return v > 0 ? `<i style="width:${v / Math.max(c.base, c.sum) * 100}%;background:${COLORS[l.id]}"></i>` : ''; }).join('') : ''}</div>
-    ${c.over ? `<div class="note warn">Os votos somam mais que os válidos estimados; usando a soma (${fmt(c.sum)}) como votos válidos.</div>` : ''}`;
+  const share = c.valid > 0 ? Math.min(1, c.sum / c.valid) : 0;
+  el.innerHTML = `<div class="row" style="justify-content:space-between"><span class="note">Atribuído <b style="color:var(--ink)">${fmt(c.sum)}</b> de ${fmt(c.valid)} válidos</span><span class="note">${pct(share * 100, 1)}</span></div>
+    <div class="bar">${RACES.find(x => x.id === r).kind === 'prop' ? DATA.races[r].lists.map(l => { const v = c.byId[l.id].votes; return v > 0 ? `<i style="width:${v / Math.max(c.valid, 1) * 100}%;background:${COLORS[l.id]}"></i>` : ''; }).join('') : ''}</div>
+    ${voidNote(c)}
+    ${c.over ? `<div class="note warn">Os votos somam mais que os válidos estimados; usando a soma como votos válidos.</div>` : ''}`;
 }
 function updateFoldersDerived() {
   const r = UI.race; const c = CACHE[r]; const u = S.units[r];
   for (const l of DATA.races[r].lists) {
     const b = c.byId[l.id]; const seats = c.res.lists[l.id]?.seats || 0;
-    const tot = $(`[data-ftot="${l.id}"]`); if (tot) tot.innerHTML = b.votes > 0 ? `${fmt(b.votes)}<small>${pct(b.votes / c.valid * 100)}</small>` : '<small>sem votos</small>';
+    const tot = $(`[data-ftot="${l.id}"]`); if (tot) tot.innerHTML = (b.votes > 0 ? `${fmt(b.votes)}<small>${pct(b.votes / c.valid * 100)}</small>` : '<small>sem votos</small>') + (b.voided > 0 ? `<small class="voidtag" title="Votos anulados (sub judice), fora do total da lista">−${fmt(b.voided)} anul.</small>` : '');
     const sb = $(`[data-fseat="${l.id}"]`); if (sb) { sb.textContent = seats; sb.classList.toggle('on', seats > 0); sb.title = seats + (seats === 1 ? ' cadeira' : ' cadeiras'); }
     const w = $(`[data-fwarn="${l.id}"]`);
     if (w) { w.hidden = !b.warn && !(b.orphan > 0); w.textContent = b.warn === 'over' ? 'Candidatos + legenda passam do total da lista; usando a soma.' : b.orphan > 0 ? 'Todos os candidatos têm votos; “outros” conta só para a lista.' : ''; }
@@ -750,16 +782,21 @@ function updateFoldersDerived() {
 function updateRowsDerived() {
   const r = UI.race; const c = CACHE[r]; const u = S.units[r];
   const auto = {};
-  for (const l of c.built) for (const x of l.cands) if (x.auto) auto[x.key] = x.votes;
+  for (const l of c.built) for (const x of l.cands) if (x.auto) auto[x.key] = x.annulled ? x.raw : x.votes;
   for (const inp of $$('#ibody input[data-k="c"]')) {
     const k = +inp.dataset.key;
     inp.placeholder = auto[k] != null ? (u === '%' ? showField(auto[k] / c.base * 100, '%') : fmt(auto[k])) : '';
   }
   for (const st of $$('#ibody [data-cst]')) {
-    const e = c.status[+st.dataset.cst];
-    st.className = 'st' + (e ? ' e' : ''); st.textContent = e ? 'E' : '';
-    st.title = e ? 'Eleito · ' + howLabel(e.how) : '';
+    const k = +st.dataset.cst; const e = c.status[k]; const ann = !!S[r].x[k];
+    st.className = 'st' + (ann ? ' x' : e ? ' e' : ''); st.textContent = ann ? 'N' : e ? 'E' : '';
+    st.title = ann ? 'Votos anulados: contam como nulos' : e ? 'Eleito · ' + howLabel(e.how) : '';
   }
+  syncAnn();
+}
+function syncAnn() {
+  const r = UI.race;
+  for (const row of $$('#ibody [data-crow]')) row.classList.toggle('annul', !!S[r].x[row.dataset.crow]);
 }
 function howLabel(h) { return { qp:'quociente partidário', s2:'sobra (fase 2)', s3:'sobra (fase 3, aberta)', art111:'mais votados (art. 111)' }[h] || h; }
 
@@ -772,7 +809,8 @@ function renderPropResults() {
     <div class="chip"><span>Quociente eleitoral</span><b>${fmt(res.QE)}</b></div>
     <div class="chip"><span>Mín. individual 10%</span><b>${fmt(Math.ceil(res.t10))}</b></div>
     <div class="chip"><span>Sobras: lista 80%</span><b>${fmt(Math.ceil(res.t80))}</b></div>
-    <div class="chip"><span>Sobras: cand. 20%</span><b>${fmt(Math.ceil(res.t20))}</b></div></div>`;
+    <div class="chip"><span>Sobras: cand. 20%</span><b>${fmt(Math.ceil(res.t20))}</b></div>
+    ${c.voided > 0 ? `<div class="chip void"><span>Anulados → nulos</span><b>${fmt(c.voided)}</b></div>` : ''}</div>`;
   if (!c.any) {
     el.innerHTML = `<div class="panel wide"><h3>Cadeiras por lista <small>${seats} vagas</small></h3>${chips}${hemi(r, [], seats)}
       <div class="msg">Preencha os votos das listas à esquerda. Cada lista precisa de ${fmt(res.QE)} votos para garantir uma cadeira pelo quociente; as sobras vão para as maiores médias.</div></div>`;
@@ -790,7 +828,7 @@ function renderPropResults() {
   const notes = [];
   if (res.unfilled > 0) notes.push(`${res.unfilled} cadeira${res.unfilled > 1 ? 's' : ''} sem candidato com votos. Preencha mais candidatos ou use “Outros candidatos”.`);
   if (res.mode === 'art111') notes.push('Nenhuma lista atingiu o quociente eleitoral: as vagas vão para os candidatos mais votados (art. 111).');
-  if (c.base > c.sum && c.sum > 0) notes.push(`${fmt(c.base - c.sum)} votos válidos ainda não atribuídos a nenhuma lista. Eles contam para o quociente, mas não elegem ninguém.`);
+  if (c.valid - c.sum > 0.5 && c.sum > 0) notes.push(`${fmt(c.valid - c.sum)} votos válidos ainda não atribuídos a nenhuma lista. Eles contam para o quociente, mas não elegem ninguém.`);
   for (const t of res.ties) notes.push(t.kind === 'avg' ? `Empate de médias na rodada ${t.round} entre ${t.lists.map(id => LISTS[r][id].short).join(' e ')}: vence a lista com mais votos.` : `Empate entre ${t.names.join(' e ')} na lista ${LISTS[r][t.list].short}: a lei escolhe o mais velho; aqui a ordem é alfabética.`);
 
   // ranking
@@ -808,6 +846,10 @@ function renderPropResults() {
     ${non.length ? `<tr class="div"><td colspan="5"></td></tr>` + non.slice(0, nShow).map((x, i) => rrow(x, eIdx.length + i + 1, false)).join('') : ''}
     </tbody></table></div>
     ${non.length > nShow ? `<button class="btn small more" data-act="more">Mostrar mais 25 (${non.length - nShow} restantes)</button>` : ''}`;
+  const annL = [];
+  for (const l of c.built) for (const x of l.cands) if (x.annulled) annL.push({ name: x.name, list: l.id, raw: x.raw, auto: x.auto });
+  annL.sort((a, b) => b.raw - a.raw || a.name.localeCompare(b.name));
+  const annBox = annL.length ? `<div class="voidbox"><b>Sub judice: votos anulados</b>${annL.map(x => `<div class="vrow"><span class="${x.auto ? 'auto' : ''}"><i class="dot" style="background:${COLORS[x.list]}"></i>${esc(x.name)} <span class="note">${esc(shortName(r, x.list))}</span></span><span class="${x.auto ? 'auto' : ''}">${fmt(x.raw)}</span></div>`).join('')}<div class="note">Fora da lista e dos votos válidos. Desmarque o candidato para ver o cenário com a candidatura validada.</div></div>` : '';
   const rankNote = `<div class="legend-note"><span><span class="tag qp">QP</span> quociente</span><span><span class="tag s2">Sobra</span> fase 2</span><span><span class="tag s3">Sobra 3</span> fase aberta</span><span class="auto">itálico = votos do rateio</span></div>
     ${flagged ? `<div class="alert">${flagged} não eleito${flagged > 1 ? 's têm' : ' tem'} mais votos que o último eleito (${fmt(minE)}).</div>` : ''}`;
 
@@ -821,7 +863,7 @@ function renderPropResults() {
     <div class="panel wide"><h3>Cadeiras por lista <small>${res.elected.length} de ${seats} preenchidas</small></h3>${chips}
       <div class="seatgrid">${hemi(r, rows, seats)}${tbl}</div>
       ${notes.length ? `<div class="warnlist">${notes.slice(0, 3).map(n => `<div class="note warn">${esc(n)}</div>`).join('')}${notes.length > 3 ? `<details><summary>Mais ${notes.length - 3} avisos</summary><div class="warnlist" style="margin-top:4px">${notes.slice(3).map(n => `<div class="note warn">${esc(n)}</div>`).join('')}</div></details>` : ''}</div>` : ''}</div>
-    <div class="panel"><h3>Ranking <small>${eIdx.length} eleitos, depois os mais votados</small></h3>${rankNote}${rank}</div>
+    <div class="panel"><h3>Ranking <small>${eIdx.length} eleitos, depois os mais votados</small></h3>${rankNote}${annBox}${rank}</div>
     <div class="panel"><h3>Sobras <small>${inPhase1} pelo quociente · ${res.rounds.length} nas sobras</small></h3>
       <div class="note">Média = votos da lista ÷ (cadeiras já obtidas + 1). A maior média leva a cadeira; repete-se até acabar.</div>${sob}</div>`;
 }
@@ -855,7 +897,7 @@ function renderMajInputs() {
       <div class="assign" id="assign"></div></div>
     <div class="inputs-body" id="ibody"><div class="hitlist"><div class="cands">
       ${DATA.races[r].candidates.map(c => `<div class="cand" data-crow="${c.n}"><span class="n">${c.n}</span><span class="nm"><b>${esc(c.name)}</b><small>${esc(c.p)}${c.coal ? ' · ' + esc(c.coal) : ''}</small></span>
-        <input class="num" data-k="m" data-key="${c.n}" inputmode="decimal" value="${showField(S[r].c[c.n], u)}" aria-label="${u === '%' ? '%' : 'Votos'} de ${esc(c.name)}"><span class="st" data-cst="${c.n}"></span></div>`).join('')}
+        <input class="num" data-k="m" data-key="${c.n}" inputmode="decimal" value="${showField(S[r].c[c.n], u)}" aria-label="${u === '%' ? '%' : 'Votos'} de ${esc(c.name)}">${annBtn(r, c)}<span class="st" data-cst="${c.n}"></span></div>`).join('')}
     </div></div></div>
     <div class="inputs-head" style="border-top:1px solid var(--line);border-bottom:0"><div class="row" style="justify-content:flex-end">
       ${UI.confirmClear ? `<span class="row"><span class="note">Apagar todos os votos desta corrida?</span><button class="btn small danger" data-act="clearOk">Apagar</button><button class="btn small ghost" data-act="clearNo">Cancelar</button></span>` : `<button class="btn ghost small danger" data-act="clear">Limpar corrida</button>`}</div></div>`;
@@ -863,27 +905,29 @@ function renderMajInputs() {
 }
 function updateMajAssign() {
   const r = UI.race; const c = CACHE[r]; const el = $('#assign'); if (!el) return;
-  const share = c.base > 0 ? c.sum / c.base * 100 : 0;
-  el.innerHTML = `<div class="row" style="justify-content:space-between"><span class="note">Atribuído <b style="color:var(--ink)">${pct(share, 1)}</b> · ${fmt(c.sum)} de ${fmt(c.base)} válidos</span><span class="note">${share < 100 ? 'Não atribuído ' + pct(100 - share, 1) : ''}</span></div>
-    <div class="bar">${c.cands.filter(x => x.votes > 0).map(x => `<i style="width:${x.votes / Math.max(c.base, c.sum) * 100}%;background:${PARTY_COLOR[x.c.p] || '#8A948D'}"></i>`).join('')}</div>
+  const share = c.valid > 0 ? c.sum / c.valid * 100 : 0;
+  el.innerHTML = `<div class="row" style="justify-content:space-between"><span class="note">Atribuído <b style="color:var(--ink)">${pct(share, 1)}</b> · ${fmt(c.sum)} de ${fmt(c.valid)} válidos</span><span class="note">${share < 99.95 ? 'Não atribuído ' + pct(100 - share, 1) : ''}</span></div>
+    <div class="bar">${c.cands.filter(x => x.votes > 0).map(x => `<i style="width:${x.votes / Math.max(c.valid, 1) * 100}%;background:${PARTY_COLOR[x.c.p] || '#8A948D'}"></i>`).join('')}</div>
+    ${voidNote(c)}
     ${c.over ? `<div class="note warn">A soma passa de 100% dos válidos; usando a soma como votos válidos.</div>` : ''}`;
   const win = r === 'sen' ? c.cands.filter(x => x.votes > 0).slice(0, 2).map(x => x.c.n) : [];
   const gw = r === 'gov' && c.cands[0] && c.cands[0].votes > c.valid / 2 ? c.cands[0].c.n : null;
   const fin = r === 'gov' ? finalists().map(x => x && x.c.n) : [];
   for (const st of $$('#ibody [data-cst]')) {
-    const n = +st.dataset.cst; const e = win.includes(n) || gw === n; const f = !gw && fin.includes(n) && c.any;
-    st.className = 'st' + (e ? ' e' : f ? ' s' : ''); st.textContent = e ? 'E' : f ? '2' : '';
-    st.title = e ? 'Eleito' : f ? 'Vai ao 2º turno' : '';
+    const n = +st.dataset.cst; const ann = !!S[r].x[n]; const e = win.includes(n) || gw === n; const f = !gw && fin.includes(n) && c.sum > 0;
+    st.className = 'st' + (ann ? ' x' : e ? ' e' : f ? ' s' : ''); st.textContent = ann ? 'N' : e ? 'E' : f ? '2' : '';
+    st.title = ann ? 'Votos anulados: contam como nulos' : e ? 'Eleito' : f ? 'Vai ao 2º turno' : '';
   }
+  syncAnn();
   for (const inp of $$('#ibody input[data-k="m"]')) {
     const n = +inp.dataset.key; const x = c.cands.find(y => y.c.n === n);
-    inp.title = x && x.votes ? `${fmt(x.votes)} votos · ${pct(x.votes / c.valid * 100)}` : '';
+    inp.title = x && x.ann && x.raw ? `${fmt(x.raw)} votos anulados (nulos)` : x && x.votes ? `${fmt(x.votes)} votos · ${pct(x.votes / c.valid * 100)}` : '';
   }
 }
 function finalists() {
   const c = CACHE.gov || computeMaj('gov');
   const top = c.cands.filter(x => x.votes > 0);
-  const pick = n => c.cands.find(x => x.c.n === n);
+  const pick = n => c.cands.find(x => x.c.n === n && !x.ann && x.votes > 0);
   let a = S.runoff.a != null ? pick(S.runoff.a) : null, b = S.runoff.b != null ? pick(S.runoff.b) : null;
   if (!a) a = top[0] || null; if (!b || (a && b.c.n === a.c.n)) b = top.find(x => !a || x.c.n !== a.c.n) || null;
   return [a, b];
@@ -892,12 +936,14 @@ function renderMajResults() {
   const r = UI.race; const c = CACHE[r]; const el = $('#results');
   const max = Math.max(...c.cands.map(x => x.votes), 1);
   const scale = r === 'sen' ? Math.max(max, c.valid * 0.3) : Math.max(max, c.valid * 0.55);
-  if (!c.any) { el.innerHTML = `<div class="panel wide"><h3>${r === 'sen' ? 'Senado' : 'Governador'} <small>${fmt(c.valid)} votos válidos</small></h3><div class="msg">Preencha o % de cada candidato à esquerda. ${r === 'sen' ? 'Os dois mais votados são eleitos. No método do TSE, os percentuais de todos os candidatos somam 100%, e cada eleitor dá dois votos.' : 'Quem passar de 50% dos votos válidos vence no 1º turno; senão, os dois primeiros vão ao 2º turno.'}</div></div>`; return; }
+  if (!(c.sum > 0)) { el.innerHTML = `<div class="panel wide"><h3>${r === 'sen' ? 'Senado' : 'Governador'} <small>${fmt(c.valid)} votos válidos</small></h3><div class="msg">Preencha o % de cada candidato à esquerda. ${r === 'sen' ? 'Os dois mais votados são eleitos. No método do TSE, os percentuais de todos os candidatos somam 100%, e cada eleitor dá dois votos.' : 'Quem passar de 50% dos votos válidos vence no 1º turno; senão, os dois primeiros vão ao 2º turno.'}</div></div>`; return; }
   const winners = r === 'sen' ? c.cands.filter(x => x.votes > 0).slice(0, 2) : [];
   const govWin = r === 'gov' && c.cands[0].votes > c.valid / 2;
   const bars = c.cands.map((x, i) => {
     const p = x.votes / c.valid * 100; const w = x.votes / scale * 100;
     const win = winners.includes(x) || (govWin && i === 0);
+    if (x.ann) return `<div class="mbar annul"><div class="who"><b>${esc(x.c.name)}</b><small>${x.c.n} · ${esc(x.c.p)}</small></div>
+      <div class="track"></div><div class="val"><b>anulado</b><small>${fmt(x.raw)} nulos</small></div></div>`;
     return `<div class="mbar ${win ? 'win' : ''}"><div class="who"><b>${esc(x.c.name)}</b><small>${x.c.n} · ${esc(x.c.p)}</small></div>
       <div class="track"><i style="width:${w}%;background:${PARTY_COLOR[x.c.p] || '#8A948D'}"></i>${r === 'gov' ? `<span class="thr" style="left:${50 * c.valid / 100 / scale * 100}%" title="50% dos válidos"></span>` : ''}</div>
       <div class="val"><b>${pct(p)}</b><small>${fmt(x.votes)}</small></div></div>`;
@@ -916,7 +962,10 @@ function renderMajResults() {
     head = govWin ? `<div class="verdict ok">${esc(lead.c.name)} eleito no 1º turno com ${pct(lead.votes / c.valid * 100)}</div>`
       : `<div class="verdict run">2º turno: ninguém passou de 50% dos válidos</div><div class="note">Faltaram ${fmt(Math.floor(c.valid / 2) + 1 - lead.votes)} votos para ${esc(lead.c.name)} vencer no 1º turno.</div>`;
   }
-  el.innerHTML = `<div class="panel wide"><h3>${r === 'sen' ? 'Senado' : 'Governador · 1º turno'} <small>${fmt(c.valid)} votos válidos${r === 'sen' ? ' (dois por eleitor)' : ''}</small></h3>${head}<div class="mbars">${bars}</div>${extra}</div>
+  const cut = r === 'gov' ? c.cands[0].votes : (winners[1] ? winners[1].votes : 0);
+  const pend = c.cands.filter(x => x.ann && x.raw > cut);
+  if (pend.length) extra += `<div class="alert">${pend.map(x => esc(x.c.name)).join(' e ')} teria${pend.length > 1 ? 'm' : ''} votos para ${r === 'gov' ? 'liderar' : 'ficar entre os dois eleitos'}. Enquanto o recurso não é julgado, o resultado fica pendente; se a anulação for confirmada para o mais votado, a regra é convocar nova eleição, não dar a vaga ao seguinte.</div>`;
+  el.innerHTML = `<div class="panel wide"><h3>${r === 'sen' ? 'Senado' : 'Governador · 1º turno'} <small>${fmt(c.valid)} votos válidos${r === 'sen' ? ' (dois por eleitor)' : ''}</small></h3>${head}<div class="mbars">${bars}</div>${c.voided > 0 ? `<div class="note warn">Sub judice: ${fmt(c.voided)} votos anulados contam como nulos; os percentuais são sobre os ${fmt(c.valid)} votos válidos restantes.</div>` : ''}${extra}</div>
     ${r === 'gov' && !govWin ? runoffHTML() : ''}`;
 }
 function runoffHTML() {
@@ -935,10 +984,10 @@ function runoffHTML() {
       <div class="kv"><label for="roBl">Brancos + nulos % (2º turno)</label><input class="field num" id="roBl" data-ro="bn" value="${showField(blank2 + null2, '%')}" inputmode="decimal"></div></div>`;
   } else {
     vA = A.votes; vB = B.votes;
-    const others = c.cands.filter(x => x !== A && x !== B && x.votes > 0);
+    const others = c.cands.filter(x => x !== A && x !== B && (x.votes > 0 || (x.ann && x.raw > 0)));
     const un = Math.max(0, c.valid - c.sum);
-    const rows = others.map(x => { const t = R.tr[x.c.n] || {}; const a = t.a ?? 0, b = t.b ?? 0; vA += x.votes * a / 100; vB += x.votes * b / 100;
-      return `<div class="tr"><span><b>${esc(x.c.name)}</b> <span class="note">${fmt(x.votes)}</span></span><input class="num" data-tr="a" data-key="${x.c.n}" value="${showField(t.a, '%')}" placeholder="0" inputmode="decimal" aria-label="% para ${esc(A.c.name)}"><input class="num" data-tr="b" data-key="${x.c.n}" value="${showField(t.b, '%')}" placeholder="0" inputmode="decimal" aria-label="% para ${esc(B.c.name)}"><span class="note" style="text-align:right">${pct(Math.max(0, 100 - a - b), 0)}</span></div>`; }).join('');
+    const rows = others.map(x => { const t = R.tr[x.c.n] || {}; const a = t.a ?? 0, b = t.b ?? 0; const xv = x.ann ? x.raw : x.votes; vA += xv * a / 100; vB += xv * b / 100;
+      return `<div class="tr"><span><b>${esc(x.c.name)}</b> <span class="note">${fmt(xv)}${x.ann ? ' · anulado' : ''}</span></span><input class="num" data-tr="a" data-key="${x.c.n}" value="${showField(t.a, '%')}" placeholder="0" inputmode="decimal" aria-label="% para ${esc(A.c.name)}"><input class="num" data-tr="b" data-key="${x.c.n}" value="${showField(t.b, '%')}" placeholder="0" inputmode="decimal" aria-label="% para ${esc(B.c.name)}"><span class="note" style="text-align:right">${pct(Math.max(0, 100 - a - b), 0)}</span></div>`; }).join('');
     const tu = R.tr.un || {}; if (un > 0) { vA += un * (tu.a ?? 0) / 100; vB += un * (tu.b ?? 0) / 100; }
     body = `<div class="note">Cada finalista mantém os próprios eleitores. Para os demais, diga que % dos eleitores vai para cada lado; o resto vira branco, nulo ou abstenção.</div>
       <div><div class="tr h"><span>Eleitores de</span><span>→ ${esc(A.c.name.split(' ')[0])}</span><span>→ ${esc(B.c.name.split(' ')[0])}</span><span style="text-align:right">Perdidos</span></div>${rows}
@@ -960,7 +1009,7 @@ function scheduleRecalc() {
   clearTimeout(recalcT);
   recalcT = setTimeout(() => {
     const r = UI.race; compute(r);
-    const $vb = $('#vbOut'); if ($vb) $vb.textContent = fmt(validBase(r));
+    const $vb = $('#vbOut'); if ($vb) $vb.textContent = fmt(CACHE[r].valid);
     if (RACES.find(x => x.id === r).kind === 'prop') { updateAssign(); updateFoldersDerived(); renderPropResults(); }
     else { updateMajAssign(); renderMajResults(); }
   }, 140);
@@ -1014,6 +1063,12 @@ document.addEventListener('click', async e => {
   if (UI.pop && !b.closest('#pop') && b.id !== 'bVers') { UI.pop = false; renderScen(); }
   if (b.dataset.race) { UI.race = b.dataset.race; UI.confirmClear = false; try { history.replaceState(null, '', '#' + RACES.find(x => x.id === UI.race).hash); } catch (err) {} saveDraft(); renderTabs(); renderStrip(); renderRace(); return; }
   if (b.dataset.toggle) { const id = b.dataset.toggle; const s = UI.open[r]; s.has(id) ? s.delete(id) : s.add(id); const f = b.closest('.folder'); f.outerHTML = folderHTML(r, LISTS[r][id]); updateFoldersDerived(); const nb = $(`[data-toggle="${id}"]`); if (nb) nb.focus(); return; }
+  if (b.dataset.ann) {
+    const k = b.dataset.ann; const on = !S[r].x[k];
+    if (on) S[r].x[k] = true; else delete S[r].x[k];
+    for (const o of $$(`[data-ann="${k}"]`)) { o.setAttribute('aria-pressed', on); o.title = on ? 'Votos anulados: contam como nulos. Clique para validar de novo.' : 'Candidatura sub judice: anular os votos (viram nulos)'; }
+    syncAnn(); touch(); scheduleRecalc(); return;
+  }
   if (b.dataset.unit) { switchUnit(r, b.dataset.unit); return; }
   if (b.dataset.sort) { UI.sort[r] = b.dataset.sort; renderPropInputs(); return; }
   if (b.dataset.romode) { S.runoff.mode = b.dataset.romode; touch(); renderMajResults(); return; }
@@ -1026,7 +1081,7 @@ document.addEventListener('click', async e => {
   if (act === 'collapseAll') { UI.open[r].clear(); renderPropBody(); return; }
   if (act === 'clear') { UI.confirmClear = true; renderRace(); return; }
   if (act === 'clearNo') { UI.confirmClear = false; renderRace(); return; }
-  if (act === 'clearOk') { UI.confirmClear = false; S[r] = r === 'fed' || r === 'est' ? { lists:{}, c:{} } : { c:{} }; if (r === 'gov') S.runoff = blankState().runoff; touch(); renderRace(); toast('Votos apagados'); return; }
+  if (act === 'clearOk') { UI.confirmClear = false; S[r] = r === 'fed' || r === 'est' ? { lists:{}, c:{}, x:{} } : { c:{}, x:{} }; if (r === 'gov') S.runoff = blankState().runoff; touch(); renderRace(); toast('Votos apagados'); return; }
   if (act === 'saveAs') { await saveScenario(true, $('#saveAsName').value); UI.pop = false; renderScen(); return; }
   if (act === 'new') { S = blankState(); scen = { id:null, name:'Sem título', dirty:false }; UI.pop = false; saveDraft(); renderAll(); toast('Novo cenário em branco'); return; }
   if (act === 'open') { const x = await storeGet(b.dataset.id); if (x) { S = mergeState(x.state); scen = { id:b.dataset.id, name:x.name, dirty:false }; UI.pop = false; saveDraft(); renderAll(); toast('Aberto: ' + x.name); } return; }
@@ -1058,11 +1113,11 @@ async function exportCsv() {
   let lines;
   if (rl.kind === 'prop') {
     lines = [['numero','candidato','partido','lista','votos','situacao'].join(';')];
-    for (const l of c.built) for (const x of l.cands) { if (!(x.votes > 0)) continue; const e = c.status[x.key]; const cc = CAND[r][x.key];
-      lines.push([x.key, q(x.name), cc.c.p, q(LISTS[r][l.id].short), x.votes, e ? 'Eleito (' + howLabel(e.how) + ')' : 'Não eleito'].join(';')); }
+    for (const l of c.built) for (const x of l.cands) { if (!(x.votes > 0) && !(x.annulled && x.raw > 0)) continue; const e = c.status[x.key]; const cc = CAND[r][x.key];
+      lines.push([x.key, q(x.name), cc.c.p, q(LISTS[r][l.id].short), x.annulled ? x.raw : x.votes, x.annulled ? 'Anulado (sub judice)' : e ? 'Eleito (' + howLabel(e.how) + ')' : 'Não eleito'].join(';')); }
   } else {
     lines = [['numero','candidato','partido','votos','pct_validos'].join(';')];
-    for (const x of c.cands) lines.push([x.c.n, q(x.c.name), x.c.p, x.votes, (x.votes / c.valid * 100).toFixed(2).replace('.', ',')].join(';'));
+    for (const x of c.cands) lines.push([x.c.n, q(x.c.name), x.c.p, x.ann ? x.raw : x.votes, x.ann ? 'anulado' : (x.votes / c.valid * 100).toFixed(2).replace('.', ',')].join(';'));
   }
   try { await downloads.save({ filename: `simulacao-rj-2026-${rl.hash}.csv`, data: '﻿' + lines.join('\n') }); toast('CSV exportado'); }
   catch (err) { if (err && err.code !== 'declined') toast('Não foi possível exportar'); }
